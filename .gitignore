@@ -1,0 +1,16 @@
+# Maven/Tycho build output
+**/target/
+dist/
+
+# Eclipse workspace metadata
+.metadata/
+.settings/
+*.classpath
+*.project
+
+# Local Codex and MCP credentials
+.codex/
+.mcp.json
+
+# macOS
+.DS_Store

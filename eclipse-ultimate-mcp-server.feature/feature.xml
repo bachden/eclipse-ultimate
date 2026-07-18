@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE feature SYSTEM "feature.dtd">
+<feature
+      id="eclipse-ultimate-mcp-server.feature"
+      label="Eclipse Ultimate MCP Server"
+      version="0.1.0.qualifier"
+      provider-name="Bach Nguyen">
+
+   <description>
+      Runs an MCP (Model Context Protocol) HTTP server inside Eclipse, exposing IDE, Coder, Git
+      and Runner/Debug tools so an AI agent can interact directly with the running workspace.
+   </description>
+
+   <copyright>
+      Bach Nguyen
+   </copyright>
+
+   <license url="">
+      No license specified.
+   </license>
+
+   <plugin
+         id="eclipse-ultimate-mcp-server"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+</feature>

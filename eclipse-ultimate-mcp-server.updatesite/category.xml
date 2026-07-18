@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <feature url="features/eclipse-ultimate-mcp-server.feature_0.1.0.qualifier.jar" id="eclipse-ultimate-mcp-server.feature" version="0.1.0.qualifier">
+      <category name="eclipse-ultimate-mcp"/>
+   </feature>
+   <category-def name="eclipse-ultimate-mcp" label="Eclipse Ultimate MCP Server">
+      <description>
+         Runs an MCP HTTP server inside Eclipse, exposing IDE, Coder, Git and Runner/Debug tools
+         to an AI agent.
+      </description>
+   </category-def>
+</site>
