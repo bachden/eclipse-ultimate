@@ -202,7 +202,7 @@ Exact tool names and JSON input schemas are advertised through tools/list.
 ### IDE and workspace
 
 - list projects, inspect project details and browse project layouts;
-- read project resources and find files;
+- read project resources, resolve linked workspace files to absolute paths and find files;
 - plain-text and regular-expression search;
 - get Java source, method source, class outlines and references;
 - inspect compilation errors and project dependencies;

@@ -4,7 +4,10 @@ import java.util.function.Consumer;
 
 import nhb.eclipse.plugin.mcp.ultimate.mcp.McpTool;
 
-/** Registers every Core IDE tool (project browsing, search, JDT introspection, tests, Maven). */
+/**
+ * Registers every Core IDE tool (project browsing, search, JDT introspection,
+ * tests, Maven).
+ */
 public final class IdeTools {
 
     private IdeTools() {
@@ -15,6 +18,7 @@ public final class IdeTools {
         register.accept(new GetProjectDetailsTool());
         register.accept(new GetProjectLayoutTool());
         register.accept(new ReadProjectResourceTool());
+        register.accept(new ResolveWorkspaceFileTool());
         register.accept(new FileSearchTool());
         register.accept(new FileSearchRegExpTool());
         register.accept(new FindFilesTool());
