@@ -12,6 +12,7 @@ public final class IdeTools {
 
     public static void registerAll(Consumer<McpTool> register) {
         register.accept(new ListProjectsTool());
+        register.accept(new GetProjectDetailsTool());
         register.accept(new GetProjectLayoutTool());
         register.accept(new ReadProjectResourceTool());
         register.accept(new FileSearchTool());
