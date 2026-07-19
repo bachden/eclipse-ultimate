@@ -22,6 +22,8 @@ public final class CoderTools {
         register.accept(new DeleteLinesInFileTool());
         register.accept(new ApplyPatchTool());
         register.accept(new OrganizeImportsTool());
+        register.accept(new QuickFixTool());
+        register.accept(new CleanUpTool());
         register.accept(new RefactorRenameJavaTypeTool());
         register.accept(new RefactorMoveJavaTypeTool());
         register.accept(new RefactorRenamePackageTool());

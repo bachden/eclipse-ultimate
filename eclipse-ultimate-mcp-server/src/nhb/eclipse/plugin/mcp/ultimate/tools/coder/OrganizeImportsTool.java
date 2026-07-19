@@ -5,6 +5,7 @@ import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jdt.core.ICompilationUnit;
+import org.eclipse.jdt.core.IJavaElement;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTParser;
@@ -23,10 +24,11 @@ import nhb.eclipse.plugin.mcp.ultimate.mcp.McpTool;
 import nhb.eclipse.plugin.mcp.ultimate.tools.Schemas;
 
 /**
- * Organizes a Java file's imports using JDT's public {@link ImportRewrite}: keeps existing
- * resolvable imports, adds one for every resolvable simple type reference in the file, sorts and
- * dedupes. Unlike Eclipse's Ctrl+Shift+O, it does not prompt to disambiguate a simple name that
- * resolves to multiple candidates — the AST binding JDT already picked at parse time wins.
+ * Organizes a Java file's imports using JDT's public {@link ImportRewrite}:
+ * keeps existing resolvable imports, adds one for every resolvable simple type
+ * reference in the file, sorts and dedupes. Unlike Eclipse's Ctrl+Shift+O, it
+ * does not prompt to disambiguate a simple name that resolves to multiple
+ * candidates — the AST binding JDT already picked at parse time wins.
  */
 public class OrganizeImportsTool implements McpTool {
 
@@ -75,7 +77,10 @@ public class OrganizeImportsTool implements McpTool {
             public boolean visit(SimpleType node) {
                 ITypeBinding binding = node.resolveBinding();
                 if (binding != null) {
-                    importRewrite.addImport(binding);
+                    IJavaElement javaElement = binding.getTypeDeclaration().getJavaElement();
+                    if (javaElement == null || !unit.equals(javaElement.getAncestor(IJavaElement.COMPILATION_UNIT))) {
+                        importRewrite.addImport(binding);
+                    }
                 }
                 return true;
             }

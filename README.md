@@ -206,7 +206,7 @@ Exact tool names and JSON input schemas are advertised through tools/list.
 - plain-text and regular-expression search;
 - get Java source, method source, class outlines and references;
 - inspect compilation errors and project dependencies;
-- format Java code and organize imports;
+- format Java code, organize imports, apply JDT quick fixes and run Clean Up profiles;
 - identify and open the file currently active in Eclipse;
 - show proposed changes in Eclipse Compare;
 - discover test classes, run all tests or run a test class;
@@ -220,7 +220,7 @@ Exact tool names and JSON input schemas are advertised through tools/list.
 - replace full files or exact strings;
 - insert or delete lines;
 - apply unified patches;
-- organize imports;
+- organize imports, apply JDT quick fixes and run Clean Up profiles;
 - rename Java types;
 - move Java types between packages;
 - rename packages and update references.
