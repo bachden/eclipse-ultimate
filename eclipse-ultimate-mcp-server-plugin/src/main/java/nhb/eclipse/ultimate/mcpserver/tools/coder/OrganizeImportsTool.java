@@ -67,7 +67,7 @@ public class OrganizeImportsTool implements McpTool {
             CompilationUnit astRoot = (CompilationUnit) parser.createAST(null);
 
             OrganizeImportsOperation operation = new OrganizeImportsOperation(unit, astRoot, false, false, true, null,
-                    true);
+                    false);
             TextEdit textEdit = operation.createTextEdit(new NullProgressMonitor());
             Document document = new Document(content);
             textEdit.apply(document);

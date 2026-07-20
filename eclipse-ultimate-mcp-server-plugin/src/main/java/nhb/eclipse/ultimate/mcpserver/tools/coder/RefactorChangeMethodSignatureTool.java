@@ -6,6 +6,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jdt.core.Flags;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IMethod;
@@ -81,6 +82,11 @@ public class RefactorChangeMethodSignatureTool implements McpTool {
 
         IMethod method = findMethod(type, methodName, currentParameterTypes);
         ChangeSignatureProcessor processor = new ChangeSignatureProcessor(method);
+        RefactoringStatus initialStatus = processor.checkInitialConditions(new NullProgressMonitor());
+        if (initialStatus.hasError()) {
+            throw new IllegalArgumentException(
+                    "Cannot change method signature: " + statusMessage(initialStatus, RefactoringStatus.ERROR));
+        }
 
         configureNameAndReturnType(arguments, processor, method);
         configureVisibility(arguments, processor);
