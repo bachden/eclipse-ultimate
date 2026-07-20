@@ -3,38 +3,38 @@
 <plugin>
    <!-- Auto-start the MCP HTTP server once the workbench is ready. -->
    <extension point="org.eclipse.ui.startup">
-      <startup class="nhb.eclipse.plugin.mcp.ultimate.StartupHook"/>
+      <startup class="nhb.eclipse.ultimate.mcpserver.StartupHook"/>
    </extension>
 
    <extension point="org.eclipse.ui.preferencePages">
-      <page id="nhb.eclipse.plugin.mcp.ultimate.preferencePage" name="Eclipse Ultimate MCP Server"
-            class="nhb.eclipse.plugin.mcp.ultimate.ui.McpPreferencePage"/>
+      <page id="nhb.eclipse.ultimate.mcpserver.preferencePage" name="Eclipse Ultimate MCP Server"
+            class="nhb.eclipse.ultimate.mcpserver.ui.McpPreferencePage"/>
    </extension>
 
    <extension point="org.eclipse.ui.commands">
-      <category id="nhb.eclipse.plugin.mcp.ultimate.commandCategory" name="Eclipse Ultimate MCP"/>
-      <command id="nhb.eclipse.plugin.mcp.ultimate.commands.startServer" name="Start MCP Server"
-            categoryId="nhb.eclipse.plugin.mcp.ultimate.commandCategory"/>
-      <command id="nhb.eclipse.plugin.mcp.ultimate.commands.stopServer" name="Stop MCP Server"
-            categoryId="nhb.eclipse.plugin.mcp.ultimate.commandCategory"/>
-      <command id="nhb.eclipse.plugin.mcp.ultimate.commands.restartServer" name="Restart MCP Server"
-            categoryId="nhb.eclipse.plugin.mcp.ultimate.commandCategory"/>
-      <command id="nhb.eclipse.plugin.mcp.ultimate.commands.openPreferences" name="MCP Server Settings..."
-            categoryId="nhb.eclipse.plugin.mcp.ultimate.commandCategory"/>
-      <command id="nhb.eclipse.plugin.mcp.ultimate.commands.showConnections" name="MCP Server Connections..."
-            categoryId="nhb.eclipse.plugin.mcp.ultimate.commandCategory"/>
+      <category id="nhb.eclipse.ultimate.mcpserver.commandCategory" name="Eclipse Ultimate MCP"/>
+      <command id="nhb.eclipse.ultimate.mcpserver.commands.startServer" name="Start MCP Server"
+            categoryId="nhb.eclipse.ultimate.mcpserver.commandCategory"/>
+      <command id="nhb.eclipse.ultimate.mcpserver.commands.stopServer" name="Stop MCP Server"
+            categoryId="nhb.eclipse.ultimate.mcpserver.commandCategory"/>
+      <command id="nhb.eclipse.ultimate.mcpserver.commands.restartServer" name="Restart MCP Server"
+            categoryId="nhb.eclipse.ultimate.mcpserver.commandCategory"/>
+      <command id="nhb.eclipse.ultimate.mcpserver.commands.openPreferences" name="MCP Server Settings..."
+            categoryId="nhb.eclipse.ultimate.mcpserver.commandCategory"/>
+      <command id="nhb.eclipse.ultimate.mcpserver.commands.showConnections" name="MCP Server Connections..."
+            categoryId="nhb.eclipse.ultimate.mcpserver.commandCategory"/>
    </extension>
 
    <extension point="org.eclipse.ui.handlers">
-      <handler commandId="nhb.eclipse.plugin.mcp.ultimate.commands.startServer"
-            class="nhb.eclipse.plugin.mcp.ultimate.ui.StartServerHandler"/>
-      <handler commandId="nhb.eclipse.plugin.mcp.ultimate.commands.stopServer"
-            class="nhb.eclipse.plugin.mcp.ultimate.ui.StopServerHandler"/>
-      <handler commandId="nhb.eclipse.plugin.mcp.ultimate.commands.restartServer"
-            class="nhb.eclipse.plugin.mcp.ultimate.ui.RestartServerHandler"/>
-      <handler commandId="nhb.eclipse.plugin.mcp.ultimate.commands.openPreferences"
-            class="nhb.eclipse.plugin.mcp.ultimate.ui.OpenPreferencesHandler"/>
-      <handler commandId="nhb.eclipse.plugin.mcp.ultimate.commands.showConnections"
-            class="nhb.eclipse.plugin.mcp.ultimate.ui.ShowConnectionsHandler"/>
+      <handler commandId="nhb.eclipse.ultimate.mcpserver.commands.startServer"
+            class="nhb.eclipse.ultimate.mcpserver.ui.StartServerHandler"/>
+      <handler commandId="nhb.eclipse.ultimate.mcpserver.commands.stopServer"
+            class="nhb.eclipse.ultimate.mcpserver.ui.StopServerHandler"/>
+      <handler commandId="nhb.eclipse.ultimate.mcpserver.commands.restartServer"
+            class="nhb.eclipse.ultimate.mcpserver.ui.RestartServerHandler"/>
+      <handler commandId="nhb.eclipse.ultimate.mcpserver.commands.openPreferences"
+            class="nhb.eclipse.ultimate.mcpserver.ui.OpenPreferencesHandler"/>
+      <handler commandId="nhb.eclipse.ultimate.mcpserver.commands.showConnections"
+            class="nhb.eclipse.ultimate.mcpserver.ui.ShowConnectionsHandler"/>
    </extension>
 </plugin>

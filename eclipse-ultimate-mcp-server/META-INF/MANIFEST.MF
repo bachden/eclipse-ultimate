@@ -5,9 +5,9 @@ Bundle-SymbolicName: eclipse-ultimate-mcp-server;singleton:=true
 Bundle-Version: 0.1.0.qualifier
 Bundle-Vendor: Bach Nguyen
 Bundle-RequiredExecutionEnvironment: JavaSE-21
-Automatic-Module-Name: nhb.eclipse.plugin.mcp.ultimate
+Automatic-Module-Name: nhb.eclipse.ultimate.mcpserver
 Bundle-ActivationPolicy: lazy
-Bundle-Activator: nhb.eclipse.plugin.mcp.ultimate.Activator
+Bundle-Activator: nhb.eclipse.ultimate.mcpserver.Activator
 Require-Bundle: org.eclipse.core.runtime,
  org.eclipse.core.resources,
  org.eclipse.core.filebuffers,
