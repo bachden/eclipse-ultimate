@@ -9,6 +9,8 @@ import java.util.Map;
 import org.eclipse.jface.dialogs.IDialogConstants;
 import org.eclipse.jface.dialogs.TitleAreaDialog;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionAdapter;
+import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -25,10 +27,12 @@ import nhb.eclipse.plugin.mcp.ultimate.server.McpConnectionLog;
 /** Shows the most recent client connections/requests to the MCP HTTP server, with response times. */
 public class McpConnectionsDialog extends TitleAreaDialog {
 
+    private static final int REFRESH_ID = IDialogConstants.CLIENT_ID + 1;
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm:ss")
             .withZone(ZoneId.systemDefault());
 
     private final McpConnectionLog connectionLog;
+    private Composite container;
 
     public McpConnectionsDialog(Shell parentShell, McpConnectionLog connectionLog) {
         super(parentShell);
@@ -44,14 +48,26 @@ public class McpConnectionsDialog extends TitleAreaDialog {
     @Override
     protected Control createDialogArea(Composite parent) {
         setTitle("MCP Server Connections");
-        setMessage("Most recent client requests handled by the MCP HTTP server.");
 
         Composite area = (Composite) super.createDialogArea(parent);
-        Composite container = new Composite(area, SWT.NONE);
+        container = new Composite(area, SWT.NONE);
         container.setLayout(new GridLayout(1, false));
         container.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 
+        populate();
+
+        return area;
+    }
+
+    /** Rebuilds the summary label and table from the connection log's current contents. */
+    private void populate() {
+        for (Control child : container.getChildren()) {
+            child.dispose();
+        }
+
         List<McpConnectionLog.Entry> entries = connectionLog != null ? connectionLog.recent() : List.of();
+        setMessage(entries.isEmpty() ? "No connections have been recorded yet."
+                : "Most recent client requests handled by the MCP HTTP server.");
 
         createAverageSummary(container, entries);
 
@@ -93,11 +109,7 @@ public class McpConnectionsDialog extends TitleAreaDialog {
             item.setText(4, formatDuration(entry.durationMillis));
         }
 
-        if (entries.isEmpty()) {
-            setMessage("No connections have been recorded yet.");
-        }
-
-        return area;
+        container.layout(true, true);
     }
 
     /** Shows the average response time per remote address, across all recorded (measured) requests. */
@@ -138,7 +150,17 @@ public class McpConnectionsDialog extends TitleAreaDialog {
 
     @Override
     protected void createButtonsForButtonBar(Composite parent) {
+        createButton(parent, REFRESH_ID, "Refresh", false);
         createButton(parent, IDialogConstants.OK_ID, IDialogConstants.OK_LABEL, true);
+    }
+
+    @Override
+    protected void buttonPressed(int buttonId) {
+        if (buttonId == REFRESH_ID) {
+            populate();
+            return;
+        }
+        super.buttonPressed(buttonId);
     }
 
     @Override
