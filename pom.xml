@@ -16,7 +16,7 @@
   </properties>
 
   <modules>
-    <module>eclipse-ultimate.updatesite</module>
+    <module>_updatesite</module>
     <module>eclipse-ultimate-mcp-server-plugin</module>
     <module>eclipse-ultimate-mcp-server</module>
   </modules>

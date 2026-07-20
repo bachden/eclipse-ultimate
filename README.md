@@ -285,7 +285,7 @@ mvn --batch-mode --update-snapshots clean verify
 
 Tycho always resolves the portable p2 target at eclipse-ultimate-mcp-server/eclipse-ci.target. The build does not scan or depend on Eclipse, DBeaver or other products installed on the local machine, so the same command works on development machines and GitHub Actions.
 
-The update site is assembled in eclipse-ultimate.updatesite/target/repository/ and copied to dist/.
+The update site is assembled in _updatesite/target/repository/ and copied to dist/.
 
 Do not commit target/ or dist/.
 
