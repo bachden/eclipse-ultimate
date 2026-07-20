@@ -2,7 +2,7 @@
 <!DOCTYPE feature SYSTEM "feature.dtd">
 <feature
       id="eclipse-ultimate"
-      label="Eclipse Ultimate"
+      label="Eclipse Ultimate MCP Server"
       version="0.1.0.qualifier"
       provider-name="Bach Nguyen">
 
