@@ -29,5 +29,8 @@ public final class CoderTools {
         register.accept(new RefactorRenamePackageTool());
         register.accept(new RefactorChangeMethodSignatureTool());
         register.accept(new CreateJavaClassTool());
+        register.accept(new ConfigureJavaSourceFolderTool());
+        register.accept(new RemoveJavaSourceFolderTool());
+        register.accept(new ConfigureJavaOutputFolderTool());
     }
 }

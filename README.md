@@ -223,6 +223,7 @@ Exact tool names and JSON input schemas are advertised through tools/list.
 - organize imports through JDT and Eclipse's shared text buffer;
 - apply JDT quick fixes and run Clean Up profiles;
 - create Java classes with structured fields, constructors and implemented methods;
+- configure or remove Java source/test folders and set default or per-source output folders;
 - change method signatures, including parameters, return type, visibility and thrown exceptions;
 - rename Java types;
 - move Java types between packages;
@@ -245,7 +246,9 @@ When m2e is installed:
 - generate the dependency-mediated graph from m2e's resolved Maven model;
 - resolve a dependency to its selected artifact and detect a matching workspace project;
 - prefer workspace project source over extracting dependency JARs;
-- explicitly open a closed workspace project selected for a dependency, without importing projects or extracting JARs.
+- explicitly open a closed workspace project selected for a dependency, without importing projects or extracting JARs;
+- add, update or remove direct dependencies and dependencyManagement entries through m2e's DOM POM editor;
+- preserve surrounding POM comments and formatting, then refresh the m2e project configuration.
 
 ### Git
 
@@ -261,7 +264,7 @@ Git write operations are exposed to the MCP client. Review requested operations 
 
 ### Runner and debug
 
-- list, inspect, create, update and refresh launch configurations;
+- list, inspect, create, duplicate, update and refresh launch configurations;
 - launch or stop applications;
 - list and remove breakpoints;
 - toggle line breakpoints and set conditions;

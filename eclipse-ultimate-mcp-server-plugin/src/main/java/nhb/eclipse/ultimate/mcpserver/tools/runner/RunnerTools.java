@@ -4,7 +4,10 @@ import java.util.function.Consumer;
 
 import nhb.eclipse.ultimate.mcpserver.mcp.McpTool;
 
-/** Registers every Runner/Debug tool, backed by the Debug platform's launch manager. */
+/**
+ * Registers every Runner/Debug tool, backed by the Debug platform's launch
+ * manager.
+ */
 public final class RunnerTools {
 
     private RunnerTools() {
@@ -14,6 +17,7 @@ public final class RunnerTools {
         register.accept(new ListLaunchConfigurationsTool());
         register.accept(new GetLaunchConfigurationTool());
         register.accept(new CreateLaunchConfigurationTool());
+        register.accept(new DuplicateLaunchConfigurationTool());
         register.accept(new UpdateLaunchConfigurationTool());
         register.accept(new RefreshLaunchConfigurationsTool());
         register.accept(new LaunchConfigurationTool());

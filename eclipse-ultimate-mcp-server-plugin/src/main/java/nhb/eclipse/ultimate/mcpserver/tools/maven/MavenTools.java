@@ -19,5 +19,10 @@ public final class MavenTools {
         register.accept(new GetMavenDependencyGraphTool());
         register.accept(new ResolveMavenDependencyTool());
         register.accept(new OpenMavenDependencyProjectTool());
+        register.accept(new RefreshMavenProjectTool());
+        if (Platform.getBundle("org.eclipse.m2e.core.ui") != null) {
+            register.accept(new ConfigureMavenDependencyTool());
+            register.accept(new RemoveMavenDependencyTool());
+        }
     }
 }
