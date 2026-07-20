@@ -11,6 +11,6 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
 
-  <artifactId>eclipse-ultimate</artifactId>
+  <artifactId>eclipse-ultimate-mcp-server-feature</artifactId>
   <packaging>eclipse-feature</packaging>
 </project>

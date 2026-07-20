@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE feature SYSTEM "feature.dtd">
 <feature
-      id="eclipse-ultimate"
+      id="eclipse-ultimate-mcp-server-feature"
       label="Eclipse Ultimate MCP Server"
       version="0.1.0.qualifier"
       provider-name="Bach Nguyen">

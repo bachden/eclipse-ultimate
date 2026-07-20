@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <site>
-   <feature url="features/eclipse-ultimate.feature_0.1.0.qualifier.jar" id="eclipse-ultimate" version="0.1.0.qualifier">
+   <feature url="features/eclipse-ultimate-mcp-server-feature_0.1.0.qualifier.jar" id="eclipse-ultimate-mcp-server-feature" version="0.1.0.qualifier">
       <category name="eclipse-ultimate-mcp"/>
    </feature>
    <category-def name="eclipse-ultimate-mcp" label="Eclipse Ultimate">
