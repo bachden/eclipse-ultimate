@@ -9,6 +9,7 @@ import com.google.gson.JsonObject;
 import nhb.eclipse.ultimate.mcpserver.tools.coder.CoderTools;
 import nhb.eclipse.ultimate.mcpserver.tools.git.GitTools;
 import nhb.eclipse.ultimate.mcpserver.tools.ide.IdeTools;
+import nhb.eclipse.ultimate.mcpserver.tools.maven.MavenTools;
 import nhb.eclipse.ultimate.mcpserver.tools.mylyn.MylynTools;
 import nhb.eclipse.ultimate.mcpserver.tools.runner.RunnerTools;
 
@@ -22,6 +23,7 @@ public final class ToolRegistry {
         CoderTools.registerAll(this::register);
         GitTools.registerAll(this::register);
         RunnerTools.registerAll(this::register);
+        MavenTools.registerAll(this::register);
         MylynTools.registerAll(this::register);
     }
 

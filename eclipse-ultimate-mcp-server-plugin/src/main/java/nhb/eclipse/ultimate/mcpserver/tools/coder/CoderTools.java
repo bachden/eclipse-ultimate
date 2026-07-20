@@ -27,5 +27,7 @@ public final class CoderTools {
         register.accept(new RefactorRenameJavaTypeTool());
         register.accept(new RefactorMoveJavaTypeTool());
         register.accept(new RefactorRenamePackageTool());
+        register.accept(new RefactorChangeMethodSignatureTool());
+        register.accept(new CreateJavaClassTool());
     }
 }

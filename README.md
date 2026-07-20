@@ -218,9 +218,12 @@ Exact tool names and JSON input schemas are advertised through tools/list.
 - create directories and files;
 - delete, rename or move resources;
 - replace full files or exact strings;
-- insert or delete lines;
+- insert text or replace an inclusive line range in one edit, and delete line ranges;
 - apply unified patches;
-- organize imports, apply JDT quick fixes and run Clean Up profiles;
+- organize imports through JDT and Eclipse's shared text buffer;
+- apply JDT quick fixes and run Clean Up profiles;
+- create Java classes with structured fields, constructors and implemented methods;
+- change method signatures, including parameters, return type, visibility and thrown exceptions;
 - rename Java types;
 - move Java types between packages;
 - rename packages and update references.
@@ -234,6 +237,15 @@ When the corresponding Mylyn bundles are installed:
 - read cached plans, recent builds and bounded console logs;
 - optionally refresh a build server configuration through its Mylyn connector;
 - redact passwords, tokens and credential properties from all tool output.
+
+### Maven and m2e
+
+When m2e is installed:
+
+- generate the dependency-mediated graph from m2e's resolved Maven model;
+- resolve a dependency to its selected artifact and detect a matching workspace project;
+- prefer workspace project source over extracting dependency JARs;
+- explicitly open a closed workspace project selected for a dependency, without importing projects or extracting JARs.
 
 ### Git
 
@@ -306,7 +318,7 @@ A normal browser may show 404 at the root because p2 repositories do not require
 
 ## Development Workflow
 
-1. Make source changes under eclipse-ultimate-mcp-server/src/.
+1. Make plugin source changes under eclipse-ultimate-mcp-server-plugin/src/main/java/.
 2. Update plugin or feature metadata when dependencies or extension points change.
 3. Run Eclipse diagnostics and format affected Java files.
 4. Run mvn --batch-mode --update-snapshots clean verify; this is the same portable Tycho build used by CI.
