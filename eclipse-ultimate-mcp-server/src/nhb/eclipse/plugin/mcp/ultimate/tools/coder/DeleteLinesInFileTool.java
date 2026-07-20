@@ -38,25 +38,25 @@ public class DeleteLinesInFileTool implements McpTool {
         int endLine = Schemas.optInt(arguments, "endLine", startLine);
 
         IFile file = TextFiles.file(projectName, filePath);
-        String content = TextFiles.read(file);
-        String[] lines = content.split("\n", -1);
-        boolean trailingNewline = content.endsWith("\n");
-        int lineCount = trailingNewline ? lines.length - 1 : lines.length;
-        if (startLine < 1 || endLine < startLine || endLine > lineCount) {
-            throw new IllegalArgumentException(
-                    "Invalid range " + startLine + ".." + endLine + " (file has " + lineCount + " lines)");
-        }
-
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < lineCount; i++) {
-            int lineNo = i + 1;
-            if (lineNo >= startLine && lineNo <= endLine) {
-                continue;
+        TextFiles.EditResult edit = TextFiles.edit(file, content -> {
+            String[] lines = content.split("\n", -1);
+            boolean trailingNewline = content.endsWith("\n");
+            int lineCount = trailingNewline ? lines.length - 1 : lines.length;
+            if (startLine < 1 || endLine < startLine || endLine > lineCount) {
+                throw new IllegalArgumentException(
+                        "Invalid range " + startLine + ".." + endLine + " (file has " + lineCount + " lines)");
             }
-            sb.append(lines[i]).append('\n');
-        }
 
-        TextFiles.write(file, sb.toString());
-        return "Deleted lines " + startLine + ".." + endLine + " from " + filePath;
+            StringBuilder updated = new StringBuilder();
+            for (int i = 0; i < lineCount; i++) {
+                int lineNo = i + 1;
+                if (lineNo < startLine || lineNo > endLine) {
+                    updated.append(lines[i]).append('\n');
+                }
+            }
+            return updated.toString();
+        });
+        return edit.changed() ? "Deleted lines " + startLine + ".." + endLine + " from " + filePath
+                : "Deletion made no content change in " + filePath;
     }
 }

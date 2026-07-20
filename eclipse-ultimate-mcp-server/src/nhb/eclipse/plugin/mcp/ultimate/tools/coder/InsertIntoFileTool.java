@@ -7,7 +7,10 @@ import com.google.gson.JsonObject;
 import nhb.eclipse.plugin.mcp.ultimate.mcp.McpTool;
 import nhb.eclipse.plugin.mcp.ultimate.tools.Schemas;
 
-/** Inserts text at a given 1-based line number in a file (pushing existing content down). */
+/**
+ * Inserts text at a given 1-based line number in a file (pushing existing
+ * content down).
+ */
 public class InsertIntoFileTool implements McpTool {
 
     @Override
@@ -39,26 +42,27 @@ public class InsertIntoFileTool implements McpTool {
         String text = Schemas.requireString(arguments, "text");
 
         IFile file = TextFiles.file(projectName, filePath);
-        String content = TextFiles.read(file);
-        String[] lines = content.split("\n", -1);
-        boolean trailingNewline = content.endsWith("\n");
-        int lineCount = trailingNewline ? lines.length - 1 : lines.length;
-        if (line < 1 || line > lineCount + 1) {
-            throw new IllegalArgumentException("line " + line + " out of range (file has " + lineCount + " lines)");
-        }
-
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < lineCount; i++) {
-            if (i + 1 == line) {
-                sb.append(text);
+        TextFiles.EditResult edit = TextFiles.edit(file, content -> {
+            String[] lines = content.split("\n", -1);
+            boolean trailingNewline = content.endsWith("\n");
+            int lineCount = trailingNewline ? lines.length - 1 : lines.length;
+            if (line < 1 || line > lineCount + 1) {
+                throw new IllegalArgumentException("line " + line + " out of range (file has " + lineCount + " lines)");
             }
-            sb.append(lines[i]).append('\n');
-        }
-        if (line == lineCount + 1) {
-            sb.append(text);
-        }
 
-        TextFiles.write(file, sb.toString());
-        return "Inserted at line " + line + " of " + filePath;
+            StringBuilder updated = new StringBuilder();
+            for (int i = 0; i < lineCount; i++) {
+                if (i + 1 == line) {
+                    updated.append(text);
+                }
+                updated.append(lines[i]).append('\n');
+            }
+            if (line == lineCount + 1) {
+                updated.append(text);
+            }
+            return updated.toString();
+        });
+        return edit.changed() ? "Inserted at line " + line + " of " + filePath
+                : "Insertion made no content change in " + filePath;
     }
 }

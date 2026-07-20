@@ -2,11 +2,12 @@
 **/target/
 dist/
 
-# Eclipse workspace metadata
+# Eclipse workspace metadata and machine-local targets
 .metadata/
 .settings/
 *.classpath
 *.project
+**/eclipse-ide.target
 
 # Local Codex and MCP credentials
 .codex/

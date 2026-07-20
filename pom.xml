@@ -12,7 +12,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <tycho-version>5.0.3</tycho-version>
-    <target-definition>eclipse-ide.target</target-definition>
+    <target-definition>eclipse-ci.target</target-definition>
   </properties>
 
   <modules>
@@ -34,10 +34,8 @@
         <artifactId>target-platform-configuration</artifactId>
         <version>${tycho-version}</version>
         <configuration>
-          <!-- Resolve against the real Eclipse JEE install (plain Directory scan of its
-               plugins/ + features/, same as the PDE target used inside the IDE) rather than
-               a p2 repository, since a plain installed product's root is not itself valid p2
-               metadata (no content.xml/content.jar there — only the p2/ profile cache). -->
+          <!-- Use the portable p2 target by default so local and GitHub builds resolve
+               the same dependencies without relying on an installed Eclipse product. -->
           <target>
             <file>${maven.multiModuleProjectDirectory}/eclipse-ultimate-mcp-server/${target-definition}</file>
           </target>

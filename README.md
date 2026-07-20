@@ -277,21 +277,13 @@ The server records a recent connection log for display in **MCP Server Connectio
 
 ## Build Locally
 
-A local macOS Eclipse installation can build the update site with:
+Build the complete plugin, feature and update site with Maven/Tycho:
 
 ~~~bash
-mvn --batch-mode clean verify
+mvn --batch-mode --update-snapshots clean verify
 ~~~
 
-The default target definition is eclipse-ultimate-mcp-server/eclipse-ide.target. It scans the local Eclipse/DBeaver installations configured in that target file. Adjust the target file if those paths differ.
-
-To build with the portable Linux CI target:
-
-~~~bash
-mvn --batch-mode --update-snapshots \
-  -Dtarget-definition=eclipse-ci.target \
-  clean verify
-~~~
+Tycho always resolves the portable p2 target at eclipse-ultimate-mcp-server/eclipse-ci.target. The build does not scan or depend on Eclipse, DBeaver or other products installed on the local machine, so the same command works on development machines and GitHub Actions.
 
 The update site is assembled in eclipse-ultimate-mcp-server.updatesite/target/repository/ and copied to dist/.
 
@@ -301,7 +293,7 @@ Do not commit target/ or dist/.
 
 The repository has two workflows:
 
-- Build and Publish Eclipse Update Site: runs on pushes to main, builds with eclipse-ci.target and deploys dist/ to GitHub Pages.
+- Build and Publish Eclipse Update Site: runs on pushes to main, uses the repository's portable Tycho target and deploys dist/ to GitHub Pages.
 - Validate Eclipse Update Site: runs on pull requests and uploads the generated update site as a build artifact.
 
 Published update site:
@@ -317,10 +309,9 @@ A normal browser may show 404 at the root because p2 repositories do not require
 1. Make source changes under eclipse-ultimate-mcp-server/src/.
 2. Update plugin or feature metadata when dependencies or extension points change.
 3. Run Eclipse diagnostics and format affected Java files.
-4. Run mvn clean verify.
-5. For CI parity, run the build with -Dtarget-definition=eclipse-ci.target.
-6. Test the installed update site in a clean or disposable Eclipse workspace.
-7. Commit source and metadata only; keep generated build output and local MCP credentials untracked.
+4. Run mvn --batch-mode --update-snapshots clean verify; this is the same portable Tycho build used by CI.
+5. Test the installed update site in a clean or disposable Eclipse workspace.
+6. Commit source and metadata only; keep generated build output and local MCP credentials untracked.
 
 ## Troubleshooting
 
@@ -354,7 +345,7 @@ Check whether **Stop Server** was selected previously. The plugin persists the u
 
 ### Build cannot resolve Eclipse dependencies
 
-Use the local target for a matching Eclipse installation, or use the CI target command above. If the target repository changes, update eclipse-ci.target and verify on Ubuntu through GitHub Actions.
+Run the Tycho command above and inspect eclipse-ci.target if dependency resolution fails. The target uses p2 repositories rather than machine-local Eclipse installations; verify repository changes through GitHub Actions.
 
 ## License
 

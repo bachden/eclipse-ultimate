@@ -7,7 +7,10 @@ import com.google.gson.JsonObject;
 import nhb.eclipse.plugin.mcp.ultimate.mcp.McpTool;
 import nhb.eclipse.plugin.mcp.ultimate.tools.Schemas;
 
-/** Replaces an exact string match in a file, requiring the match to be unique unless replaceAll is set. */
+/**
+ * Replaces an exact string match in a file, requiring the match to be unique
+ * unless replaceAll is set.
+ */
 public class ReplaceStringTool implements McpTool {
 
     @Override
@@ -41,23 +44,21 @@ public class ReplaceStringTool implements McpTool {
         boolean replaceAll = Schemas.optBoolean(arguments, "replaceAll", false);
 
         IFile file = TextFiles.file(projectName, filePath);
-        String content = TextFiles.read(file);
-
-        int firstIndex = content.indexOf(oldString);
-        if (firstIndex < 0) {
-            throw new IllegalArgumentException("oldString not found in " + filePath);
-        }
-        if (!replaceAll) {
-            int secondIndex = content.indexOf(oldString, firstIndex + oldString.length());
-            if (secondIndex >= 0) {
-                throw new IllegalArgumentException(
-                        "oldString matches multiple locations in " + filePath + "; use replaceAll or a more specific match");
+        TextFiles.EditResult edit = TextFiles.edit(file, content -> {
+            int firstIndex = content.indexOf(oldString);
+            if (firstIndex < 0) {
+                throw new IllegalArgumentException("oldString not found in " + filePath);
             }
-        }
-
-        String updated = replaceAll ? content.replace(oldString, newString)
-                : content.substring(0, firstIndex) + newString + content.substring(firstIndex + oldString.length());
-        TextFiles.write(file, updated);
-        return "Updated " + filePath;
+            if (!replaceAll) {
+                int secondIndex = content.indexOf(oldString, firstIndex + oldString.length());
+                if (secondIndex >= 0) {
+                    throw new IllegalArgumentException("oldString matches multiple locations in " + filePath
+                            + "; use replaceAll or a more specific match");
+                }
+            }
+            return replaceAll ? content.replace(oldString, newString)
+                    : content.substring(0, firstIndex) + newString + content.substring(firstIndex + oldString.length());
+        });
+        return edit.changed() ? "Updated " + filePath : "No content change needed in " + filePath;
     }
 }

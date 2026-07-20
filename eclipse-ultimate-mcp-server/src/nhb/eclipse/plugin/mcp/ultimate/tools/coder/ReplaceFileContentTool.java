@@ -17,7 +17,8 @@ public class ReplaceFileContentTool implements McpTool {
 
     @Override
     public String description() {
-        return "Overwrite a file's entire content. The file must already exist; use create_file for new files.";
+        return "Overwrite a file's entire content through Eclipse's shared text buffer. The file must already exist; "
+                + "use create_file for new files.";
     }
 
     @Override
@@ -36,7 +37,7 @@ public class ReplaceFileContentTool implements McpTool {
         String content = Schemas.requireString(arguments, "content");
 
         IFile file = TextFiles.file(projectName, filePath);
-        TextFiles.write(file, content);
-        return "Replaced content of " + filePath;
+        TextFiles.EditResult edit = TextFiles.write(file, content);
+        return edit.changed() ? "Replaced content of " + filePath : "Content already matched " + filePath;
     }
 }

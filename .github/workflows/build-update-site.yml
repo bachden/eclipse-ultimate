@@ -29,7 +29,7 @@ jobs:
           cache: maven
 
       - name: Build update site
-        run: mvn --batch-mode --update-snapshots -Dtarget-definition=eclipse-ci.target clean verify
+        run: mvn --batch-mode --update-snapshots clean verify
 
       - name: Upload update site artifact
         uses: actions/upload-pages-artifact@v3
