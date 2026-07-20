@@ -18,7 +18,7 @@
   <modules>
     <module>eclipse-ultimate.updatesite</module>
     <module>eclipse-ultimate-mcp-server-plugin</module>
-    <module>eclipse-ultimate-mcp-server-feature</module>
+    <module>eclipse-ultimate-mcp-server</module>
   </modules>
 
   <build>
