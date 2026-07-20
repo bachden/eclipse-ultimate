@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <site>
    <feature url="features/eclipse-ultimate-mcp-server_0.1.0.qualifier.jar" id="eclipse-ultimate-mcp-server" version="0.1.0.qualifier">
-      <category name="eclipse-ultimate-mcp"/>
+      <category name="eclipse-ultimate"/>
    </feature>
-   <category-def name="eclipse-ultimate-mcp" label="Eclipse Ultimate">
+   <category-def name="eclipse-ultimate" label="Eclipse Ultimate">
       <description>
          Eclipse Ultimate is a collection of Eclipse features and plugins by Bach Nguyen.
          Eclipse Ultimate MCP Server is the first feature; more features may be added under
