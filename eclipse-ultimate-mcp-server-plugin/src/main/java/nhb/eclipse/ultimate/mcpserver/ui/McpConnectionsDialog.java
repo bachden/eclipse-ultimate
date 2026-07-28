@@ -1,9 +1,13 @@
 package nhb.eclipse.ultimate.mcpserver.ui;
 
-import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -34,9 +38,10 @@ import nhb.eclipse.ultimate.mcpserver.server.McpConnectionLog;
  * Shows the most recent client connections/requests to the MCP HTTP server, with response times.
  * Each row expands inline (no separate popup) into "Request"/"Response" nodes, which expand
  * further into the full JSON tree — so the request and response for the same call, or across
- * different calls, can be compared side by side in one view. Selecting a leaf value in the tree
- * shows it in full, unabridged, in a side panel fixed to the right of the tree (the tree label
- * itself is length-capped, since values like a full source file would otherwise dominate it).
+ * different calls, can be compared side by side in one view. Selecting any field in the tree shows
+ * its value in full, unabridged (pretty-printed JSON for objects/arrays), in a side panel fixed to
+ * the right of the tree (the tree label itself is length-capped, since values like a full source
+ * file would otherwise dominate it).
  * <p>
  * Modeless: a plain {@link Window} rather than a {@link org.eclipse.jface.dialogs.Dialog}, so it
  * floats alongside the Eclipse workbench without blocking it — you can keep coding in an editor
@@ -198,23 +203,23 @@ public class McpConnectionsDialog extends Window {
             // discards them (e.g. a Refresh click shouldn't reset layout the user just set).
             saveLayout();
         }
-        // Rows are rebuilt from scratch below, so the previously selected Entry object is gone;
-        // remember it by timestamp (stable identity for an immutable, append-only log entry) to
-        // reselect the matching row afterwards instead of losing the selection on every refresh.
-        // Also remember the top-visible entry's timestamp so the scroll position can be restored
-        // in place — newer entries are prepended (most-recent-first ordering), so without this the
-        // view would jump back to the top on every refresh that added a record.
-        Instant selectedTimestamp = null;
-        Instant topTimestamp = null;
+        // Rows are rebuilt from scratch below, so the previously selected/expanded items are gone;
+        // capture their paths first (stable across rebuilds — see nodePath()) so the equivalent
+        // rows in the new tree can be re-selected/re-expanded afterwards, and the scroll position
+        // restored, instead of the view collapsing and jumping to the top on every refresh.
+        List<String> selectedPath = null;
+        List<String> topPath = null;
+        Set<List<String>> expandedPaths = new LinkedHashSet<>();
         if (tree != null && !tree.isDisposed()) {
             TreeItem[] selection = tree.getSelection();
-            if (selection.length > 0 && selection[0].getData() instanceof McpConnectionLog.Entry entry) {
-                selectedTimestamp = entry.timestamp;
+            if (selection.length > 0) {
+                selectedPath = nodePath(selection[0]);
             }
             TreeItem topItem = tree.getTopItem();
-            if (topItem != null && topItem.getData() instanceof McpConnectionLog.Entry entry) {
-                topTimestamp = entry.timestamp;
+            if (topItem != null) {
+                topPath = nodePath(topItem);
             }
+            collectExpandedPaths(tree.getItems(), expandedPaths);
         }
         for (Control child : container.getChildren()) {
             child.dispose();
@@ -260,23 +265,30 @@ public class McpConnectionsDialog extends Window {
         viewer.setLabelProvider(new ConnectionsTreeLabelProvider());
         viewer.setInput(ordered);
 
-        if (selectedTimestamp != null) {
-            for (McpConnectionLog.Entry entry : ordered) {
-                if (entry.timestamp.equals(selectedTimestamp)) {
-                    // reveal=false: restoring the scroll position ourselves below, so the
-                    // selection must not also trigger its own auto-scroll.
-                    viewer.setSelection(new StructuredSelection(entry), false);
-                    break;
-                }
+        // Re-expand shortest paths first, so each level's children exist (lazily created by the
+        // viewer on expand) before a deeper path is looked up under it.
+        List<List<String>> expandOrder = new ArrayList<>(expandedPaths);
+        expandOrder.sort(Comparator.comparingInt(List::size));
+        for (List<String> path : expandOrder) {
+            TreeItem item = findItemByPath(tree.getItems(), path);
+            if (item != null) {
+                // setExpandedState (not TreeItem.setExpanded) is what makes the viewer populate
+                // this item's children immediately, so deeper paths can be found in the loop below.
+                viewer.setExpandedState(item.getData(), true);
             }
         }
-        if (topTimestamp != null) {
-            for (TreeItem item : tree.getItems()) {
-                if (item.getData() instanceof McpConnectionLog.Entry entry
-                        && entry.timestamp.equals(topTimestamp)) {
-                    tree.setTopItem(item);
-                    break;
-                }
+        if (selectedPath != null) {
+            TreeItem item = findItemByPath(tree.getItems(), selectedPath);
+            if (item != null) {
+                // reveal=false: restoring the scroll position ourselves below, so the
+                // selection must not also trigger its own auto-scroll.
+                viewer.setSelection(new StructuredSelection(item.getData()), false);
+            }
+        }
+        if (topPath != null) {
+            TreeItem item = findItemByPath(tree.getItems(), topPath);
+            if (item != null) {
+                tree.setTopItem(item);
             }
         }
 
@@ -357,6 +369,63 @@ public class McpConnectionsDialog extends Window {
             }
         }
         uiSettings.save();
+    }
+
+    /**
+     * A stable path for a tree item, from the root down to (and including) it: the entry's
+     * timestamp, then each level's label ("Request"/"Response", a JSON member name, or "[i]" for
+     * an array element). Rebuilding the tree creates new node instances every time, but for the
+     * same underlying (immutable, append-only) log entry the structure and labels are identical,
+     * so this path — unlike object identity — survives a refresh and can be used to find the
+     * equivalent item again afterwards.
+     */
+    private static List<String> nodePath(TreeItem item) {
+        List<String> path = new ArrayList<>();
+        for (TreeItem current = item; current != null; current = current.getParentItem()) {
+            path.add(nodeKey(current.getData()));
+        }
+        Collections.reverse(path);
+        return path;
+    }
+
+    private static String nodeKey(Object data) {
+        if (data instanceof McpConnectionLog.Entry entry) {
+            return entry.timestamp.toString();
+        }
+        if (data instanceof JsonFieldNode node) {
+            return node.label();
+        }
+        return String.valueOf(data);
+    }
+
+    /** Recursively collects the path of every currently expanded item, across all created items. */
+    private static void collectExpandedPaths(TreeItem[] items, Set<List<String>> out) {
+        for (TreeItem item : items) {
+            if (item.getExpanded()) {
+                out.add(nodePath(item));
+                collectExpandedPaths(item.getItems(), out);
+            }
+        }
+    }
+
+    /** Walks down from the given top-level items to find the item matching {@code path}. */
+    private static TreeItem findItemByPath(TreeItem[] items, List<String> path) {
+        TreeItem[] level = items;
+        TreeItem found = null;
+        for (String key : path) {
+            found = null;
+            for (TreeItem candidate : level) {
+                if (nodeKey(candidate.getData()).equals(key)) {
+                    found = candidate;
+                    break;
+                }
+            }
+            if (found == null) {
+                return null;
+            }
+            level = found.getItems();
+        }
+        return found;
     }
 
     private static int readInt(IDialogSettings settingsSection, String key, int fallback) {
