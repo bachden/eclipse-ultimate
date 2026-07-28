@@ -32,8 +32,21 @@ public class ApplyPatchTool implements McpTool {
 
     @Override
     public String description() {
-        return "Apply a unified diff patch (standard @@ hunk format) to a single file. Reads and commits through "
-                + "Eclipse's shared text buffer, validates hunk counts/context, and fails if the patch makes no change.";
+        return "Apply a GNU/git unified-diff patch to a single file. Reads and commits through Eclipse's shared "
+                + "text buffer, validates hunk counts/context, and fails if the patch makes no change. The "
+                + "`patch` value must be real unified-diff hunks starting with `@@ -oldStart,oldCount "
+                + "+newStart,newCount @@`, each body line prefixed with ' ' (context), '-' (removed) or '+' "
+                + "(added) — for example:\n"
+                + "@@ -12,3 +12,4 @@\n"
+                + " unchanged line\n"
+                + "-old line\n"
+                + "+new line\n"
+                + "+another new line\n"
+                + " unchanged line\n"
+                + "This is NOT the Codex/`*** Begin Patch` envelope format (`*** Begin Patch` / `*** Update File: "
+                + "...` / `*** End Patch`) used by some other coding agents — do not send that format here, it "
+                + "will fail with \"no valid @@ hunks\". Do not include `--- a/...`/`+++ b/...` file-header "
+                + "lines either; the target file is given via `filePath`, not the patch body.";
     }
 
     @Override
@@ -41,7 +54,15 @@ public class ApplyPatchTool implements McpTool {
         JsonObject schema = Schemas.object();
         Schemas.prop(schema, "projectName", "string", "The project containing the file");
         Schemas.prop(schema, "filePath", "string", "Path to the file, relative to the project root");
-        Schemas.prop(schema, "patch", "string", "Unified diff content with @@ hunk headers");
+        Schemas.prop(schema, "patch", "string",
+                "One or more unified-diff @@ hunks only (no `--- a/`/`+++ b/` file headers, no Codex-style "
+                        + "`*** Begin Patch` envelope). Example:\n"
+                        + "@@ -12,3 +12,4 @@\n"
+                        + " unchanged line\n"
+                        + "-old line\n"
+                        + "+new line\n"
+                        + "+another new line\n"
+                        + " unchanged line");
         return Schemas.required(schema, "projectName", "filePath", "patch");
     }
 

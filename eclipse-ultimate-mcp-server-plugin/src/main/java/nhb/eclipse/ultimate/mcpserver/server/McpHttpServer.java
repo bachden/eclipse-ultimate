@@ -162,7 +162,8 @@ public class McpHttpServer {
                         long start = System.nanoTime();
                         JsonObject response = dispatcher.dispatch(requestObj);
                         long durationMillis = (System.nanoTime() - start) / 1_000_000;
-                        connectionLog.record(remote, describe(requestObj), true, durationMillis);
+                        connectionLog.record(remote, describe(requestObj), true, durationMillis,
+                                gson.toJson(requestObj), response != null ? gson.toJson(response) : null);
                         if (response != null) {
                             responses.add(response);
                         }
@@ -186,7 +187,8 @@ public class McpHttpServer {
             long start = System.nanoTime();
             JsonObject response = dispatcher.dispatch(requestObj);
             long durationMillis = (System.nanoTime() - start) / 1_000_000;
-            connectionLog.record(remote, describe(requestObj), true, durationMillis);
+            connectionLog.record(remote, describe(requestObj), true, durationMillis, gson.toJson(requestObj),
+                    response != null ? gson.toJson(response) : null);
             if (response == null) {
                 // Notification — acknowledge with no content.
                 exchange.sendResponseHeaders(202, -1);

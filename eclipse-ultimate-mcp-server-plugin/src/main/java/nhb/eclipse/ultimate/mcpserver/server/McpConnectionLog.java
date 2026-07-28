@@ -21,13 +21,20 @@ public class McpConnectionLog {
         public final boolean success;
         /** Wall-clock time to handle the request, in milliseconds; -1 if not measured. */
         public final long durationMillis;
+        /** Raw JSON-RPC request body, for inspection in the UI; null if not captured. */
+        public final String requestJson;
+        /** Raw JSON-RPC response body, for inspection in the UI; null for notifications or failures. */
+        public final String responseJson;
 
-        Entry(Instant timestamp, String remoteAddress, String detail, boolean success, long durationMillis) {
+        Entry(Instant timestamp, String remoteAddress, String detail, boolean success, long durationMillis,
+                String requestJson, String responseJson) {
             this.timestamp = timestamp;
             this.remoteAddress = remoteAddress;
             this.detail = detail;
             this.success = success;
             this.durationMillis = durationMillis;
+            this.requestJson = requestJson;
+            this.responseJson = responseJson;
         }
     }
 
@@ -36,11 +43,17 @@ public class McpConnectionLog {
     private final Deque<Entry> entries = new ConcurrentLinkedDeque<>();
 
     public void record(String remoteAddress, String detail, boolean success) {
-        record(remoteAddress, detail, success, -1);
+        record(remoteAddress, detail, success, -1, null, null);
     }
 
     public void record(String remoteAddress, String detail, boolean success, long durationMillis) {
-        entries.addLast(new Entry(Instant.now(), remoteAddress, detail, success, durationMillis));
+        record(remoteAddress, detail, success, durationMillis, null, null);
+    }
+
+    public void record(String remoteAddress, String detail, boolean success, long durationMillis,
+            String requestJson, String responseJson) {
+        entries.addLast(
+                new Entry(Instant.now(), remoteAddress, detail, success, durationMillis, requestJson, responseJson));
         while (entries.size() > MAX_ENTRIES) {
             entries.pollFirst();
         }
