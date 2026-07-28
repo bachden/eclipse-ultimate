@@ -59,7 +59,10 @@ public class McpHttpServer {
         try {
             httpServer = HttpServer.create(new InetSocketAddress(host, port), 0);
             httpServer.createContext(PATH, new McpHandler());
-            httpServer.setExecutor(Executors.newFixedThreadPool(4));
+            // One virtual thread per HTTP request: cheap to spawn, so a slow tools/call (blocked
+            // on the dispatcher's own timeout, or just legitimately slow) never starves other
+            // connections the way a small fixed pool would.
+            httpServer.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
             httpServer.start();
             boundHost = host;
             // Re-read the actual bound port: when port == 0 (random mode) the OS
@@ -77,6 +80,7 @@ public class McpHttpServer {
         if (httpServer != null) {
             httpServer.stop(0);
             httpServer = null;
+            dispatcher.shutdown();
             log("MCP server stopped");
         }
     }

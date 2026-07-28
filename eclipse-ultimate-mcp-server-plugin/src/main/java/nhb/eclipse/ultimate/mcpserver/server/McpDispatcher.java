@@ -1,5 +1,12 @@
 package nhb.eclipse.ultimate.mcpserver.server;
 
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -10,14 +17,27 @@ import nhb.eclipse.ultimate.mcpserver.mcp.ToolRegistry;
 /**
  * Handles MCP JSON-RPC 2.0 methods: initialize, tools/list, tools/call, ping.
  * Returns the response object for requests, or {@code null} for notifications.
+ * <p>
+ * {@code tools/call} runs the tool on its own virtual thread with a hard timeout: some tools
+ * ultimately block on Eclipse's workspace scheduling rules (e.g. while a build or another edit
+ * holds the lock), which is a genuine, uninterruptible-by-us wait, not a bug in the tool itself.
+ * Without a timeout that wait is unbounded and slowly starves every other request; with it, a
+ * stuck call fails loudly instead of silently pinning a thread forever.
  */
 public class McpDispatcher {
 
     private static final String SERVER_NAME = "eclipse-ultimate-mcp";
     private static final String SERVER_VERSION = "0.1.0";
     private static final String DEFAULT_PROTOCOL = "2024-11-05";
+    private static final long TOOL_CALL_TIMEOUT_SECONDS = 60;
 
     private final ToolRegistry tools = new ToolRegistry();
+    private final ExecutorService toolExecutor = Executors.newVirtualThreadPerTaskExecutor();
+
+    /** Releases the tool-call executor; call when the owning HTTP server stops. */
+    public void shutdown() {
+        toolExecutor.shutdownNow();
+    }
 
     public JsonObject dispatch(JsonObject request) {
         JsonElement id = request.get("id");
@@ -89,11 +109,19 @@ public class McpDispatcher {
                 ? params.getAsJsonObject("arguments")
                 : new JsonObject();
 
+        Callable<String> call = () -> tool.execute(arguments);
+        Future<String> future = toolExecutor.submit(call);
         try {
-            String text = tool.execute(arguments);
+            String text = future.get(TOOL_CALL_TIMEOUT_SECONDS, TimeUnit.SECONDS);
             return result(id, toolContent(text, false));
+        } catch (TimeoutException e) {
+            future.cancel(true);
+            return result(id, toolContent("Error: tool '" + toolName + "' timed out after "
+                    + TOOL_CALL_TIMEOUT_SECONDS + "s (it may be blocked on an Eclipse workspace lock — "
+                    + "e.g. a build or another edit in progress)", true));
         } catch (Exception e) {
-            String message = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            Throwable cause = e.getCause() != null ? e.getCause() : e;
+            String message = cause.getMessage() != null ? cause.getMessage() : cause.getClass().getSimpleName();
             return result(id, toolContent("Error: " + message, true));
         }
     }
