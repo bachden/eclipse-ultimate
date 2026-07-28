@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.eclipse.core.runtime.ILog;
 import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
@@ -25,6 +26,7 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
 import org.eclipse.swt.widgets.TreeItem;
+import org.osgi.framework.FrameworkUtil;
 
 import nhb.eclipse.ultimate.mcpserver.server.McpConnectionLog;
 
@@ -213,8 +215,8 @@ public class McpConnectionsDialog extends Window {
             TreeItem topItem = tree.getTopItem();
             previousTopElement = topItem != null ? topItem.getData() : null;
         }
-        System.out.println("[MCP-DEBUG] capture: expandedElements=" + java.util.Arrays.toString(expandedElements)
-                + " previousSelection=" + previousSelection
+        ILog.of(FrameworkUtil.getBundle(getClass())).info("[MCP-DEBUG] capture: expandedElements="
+                + java.util.Arrays.toString(expandedElements) + " previousSelection=" + previousSelection
                 + " previousSelectionFirst="
                 + (previousSelection != null ? previousSelection.getFirstElement() : null)
                 + " previousTopElement=" + previousTopElement);
@@ -281,8 +283,8 @@ public class McpConnectionsDialog extends Window {
                 }
             }
         }
-        System.out.println("[MCP-DEBUG] restore done: viewer.getSelection()=" + viewer.getSelection()
-                + " tree.getSelection()=" + java.util.Arrays.toString(tree.getSelection())
+        ILog.of(FrameworkUtil.getBundle(getClass())).info("[MCP-DEBUG] restore done: viewer.getSelection()="
+                + viewer.getSelection() + " tree.getSelection()=" + java.util.Arrays.toString(tree.getSelection())
                 + " tree.getSelectionCount()=" + tree.getSelectionCount());
 
         viewer.addSelectionChangedListener(event -> {
