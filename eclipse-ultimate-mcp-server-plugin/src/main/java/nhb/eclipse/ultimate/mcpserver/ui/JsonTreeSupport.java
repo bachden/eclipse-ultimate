@@ -81,12 +81,21 @@ final class JsonTreeSupport {
         return flattened.length() > LABEL_VALUE_LIMIT ? flattened.substring(0, LABEL_VALUE_LIMIT) + "…" : flattened;
     }
 
-    /** The leaf's value as plain text, unabridged — for display in a detail/side panel. */
+    /**
+     * The node's value as plain text, unabridged — for display in a detail/side panel.
+     * <p>
+     * Not just for scalars: {@link #hasChildren} is false for an empty object/array too (nothing
+     * to expand), so callers may pass one of those here — {@link JsonElement#getAsString()}
+     * throws {@link UnsupportedOperationException} on those, so they're serialised instead.
+     */
     static String fullValue(JsonFieldNode node) {
         JsonElement value = node.value();
         if (value == null || value.isJsonNull()) {
             return "null";
         }
-        return value.getAsString();
+        if (value.isJsonPrimitive()) {
+            return value.getAsString();
+        }
+        return value.toString();
     }
 }
