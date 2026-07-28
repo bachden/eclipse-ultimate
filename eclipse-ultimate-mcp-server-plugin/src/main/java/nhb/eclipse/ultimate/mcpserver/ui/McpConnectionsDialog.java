@@ -80,6 +80,15 @@ public class McpConnectionsDialog extends Window {
     protected void configureShell(Shell shell) {
         super.configureShell(shell);
         shell.setText("MCP Server Connections");
+        // Modeless JFace Windows don't get Escape-to-close for free the way Dialog does; wire it
+        // up explicitly so it behaves the same as the modal dialog this replaced.
+        shell.addListener(SWT.Traverse, event -> {
+            if (event.detail == SWT.TRAVERSE_ESCAPE) {
+                close();
+                event.detail = SWT.TRAVERSE_NONE;
+                event.doit = false;
+            }
+        });
     }
 
     @Override
