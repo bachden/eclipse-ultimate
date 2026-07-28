@@ -4,13 +4,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.eclipse.jface.dialogs.IDialogConstants;
-import org.eclipse.jface.dialogs.TitleAreaDialog;
 import org.eclipse.jface.viewers.TreeViewer;
+import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.ShellAdapter;
+import org.eclipse.swt.events.ShellEvent;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
@@ -25,34 +27,74 @@ import nhb.eclipse.ultimate.mcpserver.server.McpConnectionLog;
  * Each row expands inline (no separate popup) into "Request"/"Response" nodes, which expand
  * further into the full JSON tree — so the request and response for the same call, or across
  * different calls, can be compared side by side in one view.
+ * <p>
+ * Modeless: a plain {@link Window} rather than a {@link org.eclipse.jface.dialogs.Dialog}, so it
+ * floats alongside the Eclipse workbench without blocking it — you can keep coding in an editor
+ * while this stays open, unlike an application-modal dialog. It does not stay on top of windows
+ * outside Eclipse; only {@link org.eclipse.swt.SWT#ON_TOP} would do that, which is not wanted
+ * here since it would also cover unrelated applications.
  */
-public class McpConnectionsDialog extends TitleAreaDialog {
+public class McpConnectionsDialog extends Window {
 
-    private static final int REFRESH_ID = IDialogConstants.CLIENT_ID + 1;
+    /** At most one connections window at a time; reused/raised instead of stacking duplicates. */
+    private static McpConnectionsDialog current;
 
     private final McpConnectionLog connectionLog;
     private Composite container;
+    private Label messageLabel;
 
-    public McpConnectionsDialog(Shell parentShell, McpConnectionLog connectionLog) {
+    private McpConnectionsDialog(Shell parentShell, McpConnectionLog connectionLog) {
         super(parentShell);
         this.connectionLog = connectionLog;
-        setShellStyle(getShellStyle() | SWT.RESIZE);
+        setShellStyle(SWT.CLOSE | SWT.TITLE | SWT.RESIZE | SWT.MODELESS | SWT.MIN);
+        setBlockOnOpen(false);
+    }
+
+    /** Opens the connections window, or raises the existing one if already open. */
+    public static void show(Shell parentShell, McpConnectionLog connectionLog) {
+        if (current != null && current.getShell() != null && !current.getShell().isDisposed()) {
+            current.getShell().setActive();
+            current.populate();
+            return;
+        }
+        current = new McpConnectionsDialog(parentShell, connectionLog);
+        current.create();
+        current.getShell().addShellListener(new ShellAdapter() {
+            @Override
+            public void shellClosed(ShellEvent e) {
+                current = null;
+            }
+        });
+        current.open();
     }
 
     @Override
-    protected boolean isResizable() {
-        return true;
+    protected void configureShell(Shell shell) {
+        super.configureShell(shell);
+        shell.setText("MCP Server Connections");
     }
 
     @Override
-    protected Control createDialogArea(Composite parent) {
-        setTitle("MCP Server Connections");
+    protected Control createContents(Composite parent) {
+        Composite area = new Composite(parent, SWT.NONE);
+        area.setLayout(new GridLayout(1, false));
+        area.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 
-        Composite area = (Composite) super.createDialogArea(parent);
+        Label message = new Label(area, SWT.WRAP);
+        message.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
+
         container = new Composite(area, SWT.NONE);
         container.setLayout(new GridLayout(1, false));
         container.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 
+        Composite buttonBar = new Composite(area, SWT.NONE);
+        buttonBar.setLayout(new GridLayout(1, false));
+        buttonBar.setLayoutData(new GridData(SWT.END, SWT.CENTER, false, false));
+        Button refresh = new Button(buttonBar, SWT.PUSH);
+        refresh.setText("Refresh");
+        refresh.addListener(SWT.Selection, e -> populate());
+
+        this.messageLabel = message;
         populate();
 
         return area;
@@ -65,7 +107,7 @@ public class McpConnectionsDialog extends TitleAreaDialog {
         }
 
         List<McpConnectionLog.Entry> entries = connectionLog != null ? connectionLog.recent() : List.of();
-        setMessage(entries.isEmpty() ? "No connections have been recorded yet."
+        messageLabel.setText(entries.isEmpty() ? "No connections have been recorded yet."
                 : "Most recent client requests handled by the MCP HTTP server. Expand a row to inspect its "
                         + "request/response JSON.");
 
@@ -107,6 +149,7 @@ public class McpConnectionsDialog extends TitleAreaDialog {
         viewer.setInput(ordered);
 
         container.layout(true, true);
+        container.getParent().layout(true, true);
     }
 
     /** Shows the average response time per remote address, across all recorded (measured) requests. */
@@ -142,22 +185,7 @@ public class McpConnectionsDialog extends TitleAreaDialog {
     }
 
     @Override
-    protected void createButtonsForButtonBar(Composite parent) {
-        createButton(parent, REFRESH_ID, "Refresh", false);
-        createButton(parent, IDialogConstants.OK_ID, IDialogConstants.OK_LABEL, true);
-    }
-
-    @Override
-    protected void buttonPressed(int buttonId) {
-        if (buttonId == REFRESH_ID) {
-            populate();
-            return;
-        }
-        super.buttonPressed(buttonId);
-    }
-
-    @Override
     protected Point getInitialSize() {
-        return new Point(1000, 520);
+        return new Point(1000, 560);
     }
 }

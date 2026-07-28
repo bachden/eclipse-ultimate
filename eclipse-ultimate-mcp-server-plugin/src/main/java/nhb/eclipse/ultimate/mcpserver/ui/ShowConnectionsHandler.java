@@ -21,7 +21,7 @@ public class ShowConnectionsHandler extends AbstractHandler {
                     "The MCP server is not running, so there are no connections to show.");
             return null;
         }
-        new McpConnectionsDialog(HandlerUtil.getActiveShell(event), log).open();
+        McpConnectionsDialog.show(HandlerUtil.getActiveShell(event), log);
         return null;
     }
 }
