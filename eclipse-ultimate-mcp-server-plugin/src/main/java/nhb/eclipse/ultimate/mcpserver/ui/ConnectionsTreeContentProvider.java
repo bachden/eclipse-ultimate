@@ -32,9 +32,8 @@ final class ConnectionsTreeContentProvider implements ITreeContentProvider {
     @Override
     public Object[] getChildren(Object parentElement) {
         if (parentElement instanceof McpConnectionLog.Entry entry) {
-            String entryPath = entry.timestamp.toString();
-            return new Object[] { JsonTreeSupport.parse(entryPath, "Request", entry.requestJson),
-                    JsonTreeSupport.parse(entryPath, "Response", entry.responseJson) };
+            return new Object[] { JsonTreeSupport.parse(entry, "Request", entry.requestJson),
+                    JsonTreeSupport.parse(entry, "Response", entry.responseJson) };
         }
         if (parentElement instanceof JsonFieldNode node) {
             return JsonTreeSupport.children(node);
@@ -44,6 +43,9 @@ final class ConnectionsTreeContentProvider implements ITreeContentProvider {
 
     @Override
     public Object getParent(Object element) {
+        if (element instanceof JsonFieldNode node) {
+            return node.parent();
+        }
         return null;
     }
 

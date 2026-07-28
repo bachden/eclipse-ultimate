@@ -19,19 +19,19 @@ final class JsonTreeSupport {
     }
 
     /**
-     * Parses {@code rawJson} into a single root node labelled {@code rootLabel}, positioned under
-     * {@code parentPath} (e.g. the owning connection entry's timestamp) so its path — and those of
-     * its descendants — stay unique across entries and across the Request/Response siblings of the
-     * same entry.
+     * Parses {@code rawJson} into a single root node labelled {@code rootLabel}, under
+     * {@code parent} (the owning {@link nhb.eclipse.ultimate.mcpserver.server.McpConnectionLog.Entry})
+     * so its path/parent chain — and those of its descendants — stay unique across entries and
+     * across the Request/Response siblings of the same entry.
      */
-    static JsonFieldNode parse(String parentPath, String rootLabel, String rawJson) {
+    static JsonFieldNode parse(Object parent, String rootLabel, String rawJson) {
         if (rawJson == null || rawJson.isBlank()) {
-            return new JsonFieldNode(parentPath, rootLabel, com.google.gson.JsonNull.INSTANCE);
+            return new JsonFieldNode(parent, rootLabel, com.google.gson.JsonNull.INSTANCE);
         }
         try {
-            return new JsonFieldNode(parentPath, rootLabel, JsonParser.parseString(rawJson));
+            return new JsonFieldNode(parent, rootLabel, JsonParser.parseString(rawJson));
         } catch (Exception e) {
-            return new JsonFieldNode(parentPath, rootLabel + " (unparsable JSON: " + e.getMessage() + ")",
+            return new JsonFieldNode(parent, rootLabel + " (unparsable JSON: " + e.getMessage() + ")",
                     new JsonPrimitive(rawJson));
         }
     }
@@ -43,12 +43,12 @@ final class JsonTreeSupport {
         if (value != null && value.isJsonObject()) {
             JsonObject obj = value.getAsJsonObject();
             for (Map.Entry<String, JsonElement> entry : obj.entrySet()) {
-                children.add(new JsonFieldNode(node.path(), entry.getKey(), entry.getValue()));
+                children.add(new JsonFieldNode(node, entry.getKey(), entry.getValue()));
             }
         } else if (value != null && value.isJsonArray()) {
             JsonArray array = value.getAsJsonArray();
             for (int i = 0; i < array.size(); i++) {
-                children.add(new JsonFieldNode(node.path(), "[" + i + "]", array.get(i)));
+                children.add(new JsonFieldNode(node, "[" + i + "]", array.get(i)));
             }
         }
         return children.toArray();
