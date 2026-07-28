@@ -49,7 +49,7 @@ public class McpConnectionsDialog extends Window {
     /** At most one connections window at a time; reused/raised instead of stacking duplicates. */
     private static McpConnectionsDialog current;
 
-    private static final String EMPTY_VALUE_MESSAGE = "Select a leaf value in tree";
+    private static final String EMPTY_VALUE_MESSAGE = "Select a Request/Response field in tree";
 
     private static final String[] COLUMN_KEYS = { "time", "remote", "method", "status", "duration" };
     private static final String[] COLUMN_TITLES = { "Time / Field", "Remote Address", "Method", "Status",
@@ -223,7 +223,7 @@ public class McpConnectionsDialog extends Window {
         List<McpConnectionLog.Entry> entries = connectionLog != null ? connectionLog.recent() : List.of();
         messageLabel.setText(entries.isEmpty() ? "No connections have been recorded yet."
                 : "Most recent client requests handled by the MCP HTTP server. Expand a row for its "
-                        + "request/response JSON; select a leaf value to view it in full on the right.");
+                        + "request/response JSON; select any field to view its value in full on the right.");
 
         createAverageSummary(container, entries);
 
@@ -282,7 +282,7 @@ public class McpConnectionsDialog extends Window {
 
         viewer.addSelectionChangedListener(event -> {
             Object selected = ((IStructuredSelection) event.getSelection()).getFirstElement();
-            if (selected instanceof JsonFieldNode node && !JsonTreeSupport.hasChildren(node)) {
+            if (selected instanceof JsonFieldNode node) {
                 valuePanel.setText(JsonTreeSupport.fullValue(node));
             } else {
                 valuePanel.setText(EMPTY_VALUE_MESSAGE);

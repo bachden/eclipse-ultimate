@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -55,6 +57,8 @@ final class JsonTreeSupport {
 
     private static final int LABEL_VALUE_LIMIT = 150;
 
+    private static final Gson PRETTY_PRINT = new GsonBuilder().setPrettyPrinting().create();
+
     /**
      * Single-line label: {@code name: value}, or {@code name {n}}/{@code name [n]} for containers.
      * Scalar values are capped to keep the tree scannable — a full source file in one field
@@ -84,9 +88,10 @@ final class JsonTreeSupport {
     /**
      * The node's value as plain text, unabridged — for display in a detail/side panel.
      * <p>
-     * Not just for scalars: {@link #hasChildren} is false for an empty object/array too (nothing
-     * to expand), so callers may pass one of those here — {@link JsonElement#getAsString()}
-     * throws {@link UnsupportedOperationException} on those, so they're serialised instead.
+     * Works for any node, not just leaves: an object/array is pretty-printed as JSON so its full
+     * (unabridged, unlike the label) contents can be inspected without expanding every child by
+     * hand — {@link JsonElement#getAsString()} throws {@link UnsupportedOperationException} on
+     * those, so they're serialised instead.
      */
     static String fullValue(JsonFieldNode node) {
         JsonElement value = node.value();
@@ -96,6 +101,6 @@ final class JsonTreeSupport {
         if (value.isJsonPrimitive()) {
             return value.getAsString();
         }
-        return value.toString();
+        return PRETTY_PRINT.toJson(value);
     }
 }
