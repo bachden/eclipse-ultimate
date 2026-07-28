@@ -13,7 +13,15 @@ import java.util.concurrent.ConcurrentLinkedDeque;
  */
 public class McpConnectionLog {
 
-    /** One recorded connection attempt. */
+    /**
+     * One recorded connection attempt.
+     * <p>
+     * {@code equals()}/{@code hashCode()} are based on {@code timestamp} alone: entries are
+     * immutable and append-only, so it uniquely identifies one — this lets UI code (e.g. a
+     * {@code TreeViewer}) recognise "the same" entry across snapshots returned by separate
+     * {@link #recent()} calls, whose elements are otherwise different object instances, and so
+     * restore per-entry UI state (selection, expansion) across a refresh.
+     */
     public static final class Entry {
         public final Instant timestamp;
         public final String remoteAddress;
@@ -35,6 +43,16 @@ public class McpConnectionLog {
             this.durationMillis = durationMillis;
             this.requestJson = requestJson;
             this.responseJson = responseJson;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj instanceof Entry other && timestamp.equals(other.timestamp);
+        }
+
+        @Override
+        public int hashCode() {
+            return timestamp.hashCode();
         }
     }
 

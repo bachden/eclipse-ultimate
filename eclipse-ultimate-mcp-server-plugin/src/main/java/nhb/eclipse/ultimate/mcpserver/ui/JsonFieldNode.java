@@ -1,25 +1,34 @@
 package nhb.eclipse.ultimate.mcpserver.ui;
 
+import java.util.Objects;
+
 import com.google.gson.JsonElement;
 
 /**
  * One row in a JSON tree view: a member/element name paired with its value node.
  * <p>
- * Deliberately a plain class (not a record): {@link org.eclipse.jface.viewers.TreeViewer} tracks
- * item identity with {@code equals()}/{@code hashCode()}, and Gson's {@link JsonElement}
- * implements structural equality — two distinct nodes at different positions in the tree (e.g.
- * two sibling fields that happen to hold the same value) would collide under a record's
- * auto-generated, value-based {@code equals()} and confuse the viewer's expand/collapse state.
- * Identity equality (the default from {@link Object}) is what we actually want here.
+ * {@code equals()}/{@code hashCode()} are based on {@code path} — a string identifying this node's
+ * position in the tree (its parent's path plus its own label), not on {@code value}. Two sibling
+ * fields that happen to hold the same value must stay distinct (structural/value equality, e.g.
+ * Gson's {@link JsonElement}, would wrongly collide them), but the same field re-parsed from a
+ * fresh copy of the same JSON — as happens on every panel refresh, since nothing is cached — must
+ * compare equal so {@link org.eclipse.jface.viewers.TreeViewer} can match it against the previous
+ * tree's expanded/selected nodes and restore that state instead of losing it on rebuild.
  */
 final class JsonFieldNode {
 
+    private final String path;
     private final String label;
     private final JsonElement value;
 
-    JsonFieldNode(String label, JsonElement value) {
+    JsonFieldNode(String parentPath, String label, JsonElement value) {
+        this.path = parentPath == null ? label : parentPath + '/' + label;
         this.label = label;
         this.value = value;
+    }
+
+    String path() {
+        return path;
     }
 
     String label() {
@@ -28,5 +37,15 @@ final class JsonFieldNode {
 
     JsonElement value() {
         return value;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof JsonFieldNode other && path.equals(other.path);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(path);
     }
 }

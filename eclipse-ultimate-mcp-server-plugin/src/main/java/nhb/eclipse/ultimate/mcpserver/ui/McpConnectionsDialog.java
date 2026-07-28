@@ -1,17 +1,11 @@
 package nhb.eclipse.ultimate.mcpserver.ui;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.jface.viewers.IStructuredSelection;
-import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
@@ -71,6 +65,7 @@ public class McpConnectionsDialog extends Window {
     private Text valuePanel;
     private SashForm sash;
     private Tree tree;
+    private TreeViewer viewer;
     /** Ticks {@link #populate()} on the configured interval; re-armed via {@link #scheduleAutoRefresh}. */
     private Runnable autoRefreshTick;
     private int autoRefreshSeconds;
@@ -203,23 +198,20 @@ public class McpConnectionsDialog extends Window {
             // discards them (e.g. a Refresh click shouldn't reset layout the user just set).
             saveLayout();
         }
-        // Rows are rebuilt from scratch below, so the previously selected/expanded items are gone;
-        // capture their paths first (stable across rebuilds — see nodePath()) so the equivalent
-        // rows in the new tree can be re-selected/re-expanded afterwards, and the scroll position
-        // restored, instead of the view collapsing and jumping to the top on every refresh.
-        List<String> selectedPath = null;
-        List<String> topPath = null;
-        Set<List<String>> expandedPaths = new LinkedHashSet<>();
-        if (tree != null && !tree.isDisposed()) {
-            TreeItem[] selection = tree.getSelection();
-            if (selection.length > 0) {
-                selectedPath = nodePath(selection[0]);
-            }
+        // Rows are rebuilt from scratch below, so the previously selected/expanded elements are
+        // gone; capture the old TreeViewer's state first. McpConnectionLog.Entry and JsonFieldNode
+        // both define equals()/hashCode() by stable position (entry timestamp; JSON path) rather
+        // than identity, so the *new* elements built below compare equal to these old ones and the
+        // viewer can restore selection/expansion against them after the rebuild instead of losing
+        // that state on every refresh.
+        Object[] expandedElements = null;
+        IStructuredSelection previousSelection = null;
+        Object previousTopElement = null;
+        if (tree != null && !tree.isDisposed() && viewer != null) {
+            expandedElements = viewer.getExpandedElements();
+            previousSelection = (IStructuredSelection) viewer.getSelection();
             TreeItem topItem = tree.getTopItem();
-            if (topItem != null) {
-                topPath = nodePath(topItem);
-            }
-            collectExpandedPaths(tree.getItems(), expandedPaths);
+            previousTopElement = topItem != null ? topItem.getData() : null;
         }
         for (Control child : container.getChildren()) {
             child.dispose();
@@ -238,7 +230,7 @@ public class McpConnectionsDialog extends Window {
         sashData.heightHint = 360;
         sash.setLayoutData(sashData);
 
-        TreeViewer viewer = new TreeViewer(sash, SWT.BORDER | SWT.FULL_SELECTION | SWT.V_SCROLL | SWT.H_SCROLL);
+        viewer = new TreeViewer(sash, SWT.BORDER | SWT.FULL_SELECTION | SWT.V_SCROLL | SWT.H_SCROLL);
         tree = viewer.getTree();
         tree.setHeaderVisible(true);
         tree.setLinesVisible(true);
@@ -265,30 +257,23 @@ public class McpConnectionsDialog extends Window {
         viewer.setLabelProvider(new ConnectionsTreeLabelProvider());
         viewer.setInput(ordered);
 
-        // Re-expand shortest paths first, so each level's children exist (lazily created by the
-        // viewer on expand) before a deeper path is looked up under it.
-        List<List<String>> expandOrder = new ArrayList<>(expandedPaths);
-        expandOrder.sort(Comparator.comparingInt(List::size));
-        for (List<String> path : expandOrder) {
-            TreeItem item = findItemByPath(tree.getItems(), path);
-            if (item != null) {
-                // setExpandedState (not TreeItem.setExpanded) is what makes the viewer populate
-                // this item's children immediately, so deeper paths can be found in the loop below.
-                viewer.setExpandedState(item.getData(), true);
-            }
+        // Restore expansion/selection against the *new* elements: Entry/JsonFieldNode equals() is
+        // position-based (see their javadoc), so the old elements captured above still match here.
+        if (expandedElements != null && expandedElements.length > 0) {
+            viewer.setExpandedElements(expandedElements);
         }
-        if (selectedPath != null) {
-            TreeItem item = findItemByPath(tree.getItems(), selectedPath);
-            if (item != null) {
-                // reveal=false: restoring the scroll position ourselves below, so the
-                // selection must not also trigger its own auto-scroll.
-                viewer.setSelection(new StructuredSelection(item.getData()), false);
-            }
+        if (previousSelection != null && !previousSelection.isEmpty()) {
+            // reveal=false: restoring the scroll position ourselves below, so the selection must
+            // not also trigger its own auto-scroll.
+            viewer.setSelection(previousSelection, false);
         }
-        if (topPath != null) {
-            TreeItem item = findItemByPath(tree.getItems(), topPath);
-            if (item != null) {
-                tree.setTopItem(item);
+        if (previousTopElement != null) {
+            for (TreeItem item : tree.getItems()) {
+                TreeItem match = findItemForElement(item, previousTopElement);
+                if (match != null) {
+                    tree.setTopItem(match);
+                    break;
+                }
             }
         }
 
@@ -372,60 +357,23 @@ public class McpConnectionsDialog extends Window {
     }
 
     /**
-     * A stable path for a tree item, from the root down to (and including) it: the entry's
-     * timestamp, then each level's label ("Request"/"Response", a JSON member name, or "[i]" for
-     * an array element). Rebuilding the tree creates new node instances every time, but for the
-     * same underlying (immutable, append-only) log entry the structure and labels are identical,
-     * so this path — unlike object identity — survives a refresh and can be used to find the
-     * equivalent item again afterwards.
+     * Searches {@code item} and its already-created descendants for one whose data equals
+     * {@code element} (via {@link McpConnectionLog.Entry#equals} / {@link JsonFieldNode#equals}).
+     * Only used to restore the scroll position against a row that was already visible before the
+     * refresh, so — unlike expansion/selection, which the viewer itself resolves via
+     * {@code setExpandedElements}/{@code setSelection} — no lazy child creation is needed here.
      */
-    private static List<String> nodePath(TreeItem item) {
-        List<String> path = new ArrayList<>();
-        for (TreeItem current = item; current != null; current = current.getParentItem()) {
-            path.add(nodeKey(current.getData()));
+    private static TreeItem findItemForElement(TreeItem item, Object element) {
+        if (element.equals(item.getData())) {
+            return item;
         }
-        Collections.reverse(path);
-        return path;
-    }
-
-    private static String nodeKey(Object data) {
-        if (data instanceof McpConnectionLog.Entry entry) {
-            return entry.timestamp.toString();
-        }
-        if (data instanceof JsonFieldNode node) {
-            return node.label();
-        }
-        return String.valueOf(data);
-    }
-
-    /** Recursively collects the path of every currently expanded item, across all created items. */
-    private static void collectExpandedPaths(TreeItem[] items, Set<List<String>> out) {
-        for (TreeItem item : items) {
-            if (item.getExpanded()) {
-                out.add(nodePath(item));
-                collectExpandedPaths(item.getItems(), out);
+        for (TreeItem child : item.getItems()) {
+            TreeItem match = findItemForElement(child, element);
+            if (match != null) {
+                return match;
             }
         }
-    }
-
-    /** Walks down from the given top-level items to find the item matching {@code path}. */
-    private static TreeItem findItemByPath(TreeItem[] items, List<String> path) {
-        TreeItem[] level = items;
-        TreeItem found = null;
-        for (String key : path) {
-            found = null;
-            for (TreeItem candidate : level) {
-                if (nodeKey(candidate.getData()).equals(key)) {
-                    found = candidate;
-                    break;
-                }
-            }
-            if (found == null) {
-                return null;
-            }
-            level = found.getItems();
-        }
-        return found;
+        return null;
     }
 
     private static int readInt(IDialogSettings settingsSection, String key, int fallback) {
