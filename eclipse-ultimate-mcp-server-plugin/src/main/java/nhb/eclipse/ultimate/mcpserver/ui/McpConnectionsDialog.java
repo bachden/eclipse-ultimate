@@ -213,6 +213,11 @@ public class McpConnectionsDialog extends Window {
             TreeItem topItem = tree.getTopItem();
             previousTopElement = topItem != null ? topItem.getData() : null;
         }
+        System.out.println("[MCP-DEBUG] capture: expandedElements=" + java.util.Arrays.toString(expandedElements)
+                + " previousSelection=" + previousSelection
+                + " previousSelectionFirst="
+                + (previousSelection != null ? previousSelection.getFirstElement() : null)
+                + " previousTopElement=" + previousTopElement);
         for (Control child : container.getChildren()) {
             child.dispose();
         }
@@ -276,6 +281,9 @@ public class McpConnectionsDialog extends Window {
                 }
             }
         }
+        System.out.println("[MCP-DEBUG] restore done: viewer.getSelection()=" + viewer.getSelection()
+                + " tree.getSelection()=" + java.util.Arrays.toString(tree.getSelection())
+                + " tree.getSelectionCount()=" + tree.getSelectionCount());
 
         viewer.addSelectionChangedListener(event -> {
             Object selected = ((IStructuredSelection) event.getSelection()).getFirstElement();

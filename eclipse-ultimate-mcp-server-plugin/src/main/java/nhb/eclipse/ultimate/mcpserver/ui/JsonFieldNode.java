@@ -68,4 +68,9 @@ final class JsonFieldNode {
     public int hashCode() {
         return Objects.hashCode(path);
     }
+
+    @Override
+    public String toString() {
+        return "JsonFieldNode[" + path + "]";
+    }
 }
