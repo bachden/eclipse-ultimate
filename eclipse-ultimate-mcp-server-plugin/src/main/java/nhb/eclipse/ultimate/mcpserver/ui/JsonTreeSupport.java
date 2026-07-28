@@ -53,7 +53,13 @@ final class JsonTreeSupport {
                 || value.isJsonArray() && value.getAsJsonArray().size() > 0);
     }
 
-    /** Single-line label: {@code name: value}, or {@code name {n}}/{@code name [n]} for containers. */
+    private static final int LABEL_VALUE_LIMIT = 150;
+
+    /**
+     * Single-line label: {@code name: value}, or {@code name {n}}/{@code name [n]} for containers.
+     * Scalar values are capped to keep the tree scannable — a full source file in one field
+     * shouldn't dominate every row's width; select the leaf to see it in full in the side panel.
+     */
     static String label(JsonFieldNode node) {
         JsonElement value = node.value();
         if (value == null || value.isJsonNull()) {
@@ -67,6 +73,20 @@ final class JsonTreeSupport {
             int size = value.getAsJsonArray().size();
             return node.label() + (size == 0 ? ": []" : " [" + size + "]");
         }
-        return node.label() + ": " + value.getAsString();
+        return node.label() + ": " + truncate(value.getAsString());
+    }
+
+    private static String truncate(String text) {
+        String flattened = text.replaceAll("\\s+", " ");
+        return flattened.length() > LABEL_VALUE_LIMIT ? flattened.substring(0, LABEL_VALUE_LIMIT) + "…" : flattened;
+    }
+
+    /** The leaf's value as plain text, unabridged — for display in a detail/side panel. */
+    static String fullValue(JsonFieldNode node) {
+        JsonElement value = node.value();
+        if (value == null || value.isJsonNull()) {
+            return "null";
+        }
+        return value.getAsString();
     }
 }

@@ -4,9 +4,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.events.ShellAdapter;
 import org.eclipse.swt.events.ShellEvent;
 import org.eclipse.swt.graphics.Point;
@@ -17,6 +19,7 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
 
@@ -26,7 +29,9 @@ import nhb.eclipse.ultimate.mcpserver.server.McpConnectionLog;
  * Shows the most recent client connections/requests to the MCP HTTP server, with response times.
  * Each row expands inline (no separate popup) into "Request"/"Response" nodes, which expand
  * further into the full JSON tree — so the request and response for the same call, or across
- * different calls, can be compared side by side in one view.
+ * different calls, can be compared side by side in one view. Selecting a leaf value in the tree
+ * shows it in full, unabridged, in a side panel fixed to the right of the tree (the tree label
+ * itself is length-capped, since values like a full source file would otherwise dominate it).
  * <p>
  * Modeless: a plain {@link Window} rather than a {@link org.eclipse.jface.dialogs.Dialog}, so it
  * floats alongside the Eclipse workbench without blocking it — you can keep coding in an editor
@@ -39,9 +44,12 @@ public class McpConnectionsDialog extends Window {
     /** At most one connections window at a time; reused/raised instead of stacking duplicates. */
     private static McpConnectionsDialog current;
 
+    private static final String EMPTY_VALUE_MESSAGE = "Select a leaf value in tree";
+
     private final McpConnectionLog connectionLog;
     private Composite container;
     private Label messageLabel;
+    private Text valuePanel;
 
     private McpConnectionsDialog(Shell parentShell, McpConnectionLog connectionLog) {
         super(parentShell);
@@ -108,19 +116,27 @@ public class McpConnectionsDialog extends Window {
 
         List<McpConnectionLog.Entry> entries = connectionLog != null ? connectionLog.recent() : List.of();
         messageLabel.setText(entries.isEmpty() ? "No connections have been recorded yet."
-                : "Most recent client requests handled by the MCP HTTP server. Expand a row to inspect its "
-                        + "request/response JSON.");
+                : "Most recent client requests handled by the MCP HTTP server. Expand a row for its "
+                        + "request/response JSON; select a leaf value to view it in full on the right.");
 
         createAverageSummary(container, entries);
 
-        TreeViewer viewer = new TreeViewer(container, SWT.BORDER | SWT.FULL_SELECTION | SWT.V_SCROLL | SWT.H_SCROLL);
+        SashForm sash = new SashForm(container, SWT.HORIZONTAL);
+        sash.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
+
+        TreeViewer viewer = new TreeViewer(sash, SWT.BORDER | SWT.FULL_SELECTION | SWT.V_SCROLL | SWT.H_SCROLL);
         Tree tree = viewer.getTree();
         tree.setHeaderVisible(true);
         tree.setLinesVisible(true);
-        GridData treeData = new GridData(SWT.FILL, SWT.FILL, true, true);
-        treeData.widthHint = 950;
-        treeData.heightHint = 360;
-        tree.setLayoutData(treeData);
+
+        valuePanel = new Text(sash, SWT.BORDER | SWT.MULTI | SWT.WRAP | SWT.V_SCROLL | SWT.H_SCROLL | SWT.READ_ONLY);
+        valuePanel.setText(EMPTY_VALUE_MESSAGE);
+
+        sash.setWeights(7, 3);
+        GridData sashData = new GridData(SWT.FILL, SWT.FILL, true, true);
+        sashData.widthHint = 950;
+        sashData.heightHint = 360;
+        sash.setLayoutData(sashData);
 
         TreeColumn timeCol = new TreeColumn(tree, SWT.LEFT);
         timeCol.setText("Time / Field");
@@ -147,6 +163,15 @@ public class McpConnectionsDialog extends Window {
         viewer.setContentProvider(new ConnectionsTreeContentProvider(ordered));
         viewer.setLabelProvider(new ConnectionsTreeLabelProvider());
         viewer.setInput(ordered);
+
+        viewer.addSelectionChangedListener(event -> {
+            Object selected = ((IStructuredSelection) event.getSelection()).getFirstElement();
+            if (selected instanceof JsonFieldNode node && !JsonTreeSupport.hasChildren(node)) {
+                valuePanel.setText(JsonTreeSupport.fullValue(node));
+            } else {
+                valuePanel.setText(EMPTY_VALUE_MESSAGE);
+            }
+        });
 
         container.layout(true, true);
         container.getParent().layout(true, true);
