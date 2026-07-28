@@ -46,5 +46,6 @@ Require-Bundle: org.eclipse.core.runtime,
  org.eclipse.mylyn.tasks.ui;resolution:=optional,
  org.eclipse.mylyn.builds.core;resolution:=optional,
  org.eclipse.mylyn.builds.ui;resolution:=optional,
+ io.github.nbauma109.decompiler;resolution:=optional,
  com.google.gson
 Import-Package: com.sun.net.httpserver

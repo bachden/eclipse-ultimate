@@ -79,10 +79,11 @@ public class ApplyPatchTool implements McpTool {
             int oldStart = Integer.parseInt(header.group(1));
             int oldCount = count(header.group(2));
             int newStart = Integer.parseInt(header.group(3));
-            int newCount = count(header.group(4));
             validateRangeStart(oldStart, oldCount, "old", filePath);
-            validateRangeStart(newStart, newCount, "new", filePath);
+            validateRangeStart(newStart, count(header.group(4)), "new", filePath);
 
+            // The declared old/new counts are advisory only (AI-generated patches routinely miscount them);
+            // the hunk body's own ' '/'+'/'-' markers are the source of truth for how many lines it covers.
             int hunkStart = rangeStartIndex(oldStart, oldCount);
             if (hunkStart < sourceIndex) {
                 throw new IllegalArgumentException(
@@ -96,12 +97,6 @@ public class ApplyPatchTool implements McpTool {
                 result.add(lines.get(sourceIndex++));
             }
 
-            int expectedNewIndex = rangeStartIndex(newStart, newCount);
-            if (result.size() != expectedNewIndex) {
-                throw new IllegalArgumentException("Patch new-file hunk position is inconsistent in " + filePath
-                        + ": header starts at " + newStart + " but current output line is " + (result.size() + 1));
-            }
-
             i++;
             int oldSeen = 0;
             int newSeen = 0;
@@ -110,18 +105,6 @@ public class ApplyPatchTool implements McpTool {
             while (i < patchLines.length) {
                 String hline = patchLines[i];
 
-                if (oldSeen == oldCount && newSeen == newCount) {
-                    if (NO_NEWLINE_MARKER.equals(hline)) {
-                        resultTrailingNewline = trailingNewlineAfterMarker(previousMarker);
-                        hunkHasNoNewlineMarker = true;
-                        i++;
-                    } else if (!hline.isEmpty() && isPatchBodyMarker(hline.charAt(0))
-                            && !HUNK_HEADER.matcher(hline).matches() && !isFileHeader(hline)) {
-                        throw new IllegalArgumentException(
-                                "Patch hunk contains more lines than declared by its header in " + filePath);
-                    }
-                    break;
-                }
                 if (HUNK_HEADER.matcher(hline).matches()) {
                     break;
                 }
@@ -164,16 +147,13 @@ public class ApplyPatchTool implements McpTool {
                 default:
                     throw new IllegalArgumentException("Unrecognised patch line: " + hline);
                 }
-                if (oldSeen > oldCount || newSeen > newCount) {
-                    throw new IllegalArgumentException("Patch hunk line counts exceed its header in " + filePath);
-                }
                 previousMarker = marker;
                 i++;
             }
 
-            if (oldSeen != oldCount || newSeen != newCount) {
-                throw new IllegalArgumentException("Patch hunk count mismatch in " + filePath + ": expected old/new "
-                        + oldCount + "/" + newCount + " lines but found " + oldSeen + "/" + newSeen);
+            if (oldSeen == 0 && newSeen == 0) {
+                throw new IllegalArgumentException("Patch hunk at old line " + oldStart + " has no body lines in "
+                        + filePath);
             }
             if (sourceIndex == lines.size() && !hunkHasNoNewlineMarker) {
                 resultTrailingNewline = true;
@@ -230,14 +210,6 @@ public class ApplyPatchTool implements McpTool {
 
     private static boolean trailingNewlineAfterMarker(char previousMarker) {
         return previousMarker == '-';
-    }
-
-    private static boolean isPatchBodyMarker(char marker) {
-        return marker == ' ' || marker == '+' || marker == '-' || marker == '\\';
-    }
-
-    private static boolean isFileHeader(String line) {
-        return line.startsWith("--- ") || line.startsWith("+++ ");
     }
 
     private static void expect(List<String> lines, int index, String expected, String filePath) {

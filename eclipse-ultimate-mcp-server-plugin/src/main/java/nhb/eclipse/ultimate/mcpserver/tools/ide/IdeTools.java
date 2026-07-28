@@ -25,6 +25,7 @@ public final class IdeTools {
         register.accept(new FileSearchRegExpTool());
         register.accept(new FindFilesTool());
         register.accept(new GetSourceTool());
+        register.accept(new ViewSourceTool());
         register.accept(new GetMethodSourceTool());
         register.accept(new GetClassOutlineTool());
         register.accept(new FindReferencesTool());
