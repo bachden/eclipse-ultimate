@@ -268,6 +268,13 @@ public class McpConnectionsDialog extends Window {
             // reveal=false: restoring the scroll position ourselves below, so the selection must
             // not also trigger its own auto-scroll.
             viewer.setSelection(previousSelection, false);
+            // setSelection() above runs before the selection-changed listener is wired up below,
+            // so it doesn't fire and the value panel is left showing the empty-state message even
+            // though a row is actually selected. Populate it directly from the restored selection.
+            Object selected = previousSelection.getFirstElement();
+            if (selected instanceof JsonFieldNode node) {
+                valuePanel.setText(JsonTreeSupport.fullValue(node));
+            }
         }
         if (previousTopElement != null) {
             for (TreeItem item : tree.getItems()) {
