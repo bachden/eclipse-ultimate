@@ -21,6 +21,7 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Spinner;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
@@ -130,13 +131,19 @@ public class McpConnectionsDialog extends Window {
         container.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 
         Composite buttonBar = new Composite(area, SWT.NONE);
-        buttonBar.setLayout(new GridLayout(3, false));
-        buttonBar.setLayoutData(new GridData(SWT.END, SWT.CENTER, false, false));
+        buttonBar.setLayout(new GridLayout(2, false));
+        buttonBar.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 
-        Label autoRefreshLabel = new Label(buttonBar, SWT.NONE);
+        createMaxEntriesControl(buttonBar);
+
+        Composite rightGroup = new Composite(buttonBar, SWT.NONE);
+        rightGroup.setLayout(new GridLayout(3, false));
+        rightGroup.setLayoutData(new GridData(SWT.END, SWT.CENTER, false, false));
+
+        Label autoRefreshLabel = new Label(rightGroup, SWT.NONE);
         autoRefreshLabel.setText("Auto-refresh:");
 
-        Combo autoRefreshCombo = new Combo(buttonBar, SWT.READ_ONLY);
+        Combo autoRefreshCombo = new Combo(rightGroup, SWT.READ_ONLY);
         autoRefreshCombo.setItems(AUTO_REFRESH_LABELS);
         int savedIndex = readInt(uiSettings.section(), ConnectionsUiSettings.KEY_AUTO_REFRESH_INDEX, 0);
         autoRefreshCombo.select(savedIndex >= 0 && savedIndex < AUTO_REFRESH_LABELS.length ? savedIndex : 0);
@@ -146,7 +153,7 @@ public class McpConnectionsDialog extends Window {
             scheduleAutoRefresh(autoRefreshCombo.getSelectionIndex());
         });
 
-        Button refresh = new Button(buttonBar, SWT.PUSH);
+        Button refresh = new Button(rightGroup, SWT.PUSH);
         refresh.setText("Refresh");
         refresh.addListener(SWT.Selection, e -> populate());
 
@@ -155,6 +162,82 @@ public class McpConnectionsDialog extends Window {
         scheduleAutoRefresh(autoRefreshCombo.getSelectionIndex());
 
         return area;
+    }
+
+    /**
+     * "Max requests kept" spinner, left-aligned in the button bar. Persisted across
+     * close/reopen/restart via {@link ConnectionsUiSettings}; changing it doesn't take effect on
+     * the log until Apply is pressed (or Cancel reverts to the last applied value) — the Apply/
+     * Cancel pair only appears once the spinner value differs from what's currently applied, so
+     * the bar stays uncluttered until there's actually a pending change.
+     */
+    private void createMaxEntriesControl(Composite buttonBar) {
+        Composite maxEntriesGroup = new Composite(buttonBar, SWT.NONE);
+        GridLayout groupLayout = new GridLayout(4, false);
+        groupLayout.marginWidth = 0;
+        groupLayout.marginHeight = 0;
+        maxEntriesGroup.setLayout(groupLayout);
+        maxEntriesGroup.setLayoutData(new GridData(SWT.BEGINNING, SWT.CENTER, true, false));
+
+        Label maxEntriesLabel = new Label(maxEntriesGroup, SWT.NONE);
+        maxEntriesLabel.setText("Max requests kept:");
+
+        int[] appliedMaxEntries = {
+                readInt(uiSettings.section(), ConnectionsUiSettings.KEY_MAX_ENTRIES,
+                        McpConnectionLog.DEFAULT_MAX_ENTRIES) };
+        if (connectionLog != null) {
+            connectionLog.setMaxEntries(appliedMaxEntries[0]);
+        }
+
+        Spinner maxEntriesSpinner = new Spinner(maxEntriesGroup, SWT.BORDER);
+        maxEntriesSpinner.setMinimum(1);
+        maxEntriesSpinner.setMaximum(10000);
+        maxEntriesSpinner.setSelection(appliedMaxEntries[0]);
+
+        Button apply = new Button(maxEntriesGroup, SWT.PUSH);
+        apply.setText("✔"); // heavy check mark
+        apply.setToolTipText("Apply");
+        apply.setVisible(false);
+        GridData applyData = new GridData(SWT.LEFT, SWT.CENTER, false, false);
+        applyData.exclude = true;
+        apply.setLayoutData(applyData);
+
+        Button cancel = new Button(maxEntriesGroup, SWT.PUSH);
+        cancel.setText("✖"); // heavy multiplication x
+        cancel.setToolTipText("Cancel");
+        cancel.setVisible(false);
+        GridData cancelData = new GridData(SWT.LEFT, SWT.CENTER, false, false);
+        cancelData.exclude = true;
+        cancel.setLayoutData(cancelData);
+
+        Runnable[] updatePendingVisibility = new Runnable[1];
+        updatePendingVisibility[0] = () -> {
+            boolean pending = maxEntriesSpinner.getSelection() != appliedMaxEntries[0];
+            apply.setVisible(pending);
+            applyData.exclude = !pending;
+            cancel.setVisible(pending);
+            cancelData.exclude = !pending;
+            maxEntriesGroup.layout(true, true);
+            buttonBar.layout(true, true);
+        };
+        maxEntriesSpinner.addListener(SWT.Modify, e -> updatePendingVisibility[0].run());
+
+        apply.addListener(SWT.Selection, e -> {
+            int newValue = maxEntriesSpinner.getSelection();
+            appliedMaxEntries[0] = newValue;
+            if (connectionLog != null) {
+                connectionLog.setMaxEntries(newValue);
+            }
+            uiSettings.section().put(ConnectionsUiSettings.KEY_MAX_ENTRIES, newValue);
+            uiSettings.save();
+            updatePendingVisibility[0].run();
+            populate();
+        });
+
+        cancel.addListener(SWT.Selection, e -> {
+            maxEntriesSpinner.setSelection(appliedMaxEntries[0]);
+            updatePendingVisibility[0].run();
+        });
     }
 
     /**

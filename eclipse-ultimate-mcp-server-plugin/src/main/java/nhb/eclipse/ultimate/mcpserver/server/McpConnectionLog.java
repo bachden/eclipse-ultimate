@@ -56,9 +56,20 @@ public class McpConnectionLog {
         }
     }
 
-    private static final int MAX_ENTRIES = 200;
+    public static final int DEFAULT_MAX_ENTRIES = 100;
 
     private final Deque<Entry> entries = new ConcurrentLinkedDeque<>();
+    private volatile int maxEntries = DEFAULT_MAX_ENTRIES;
+
+    /** Sets how many recent entries to retain; trims the log immediately if it now exceeds this. */
+    public void setMaxEntries(int maxEntries) {
+        this.maxEntries = Math.max(1, maxEntries);
+        trim();
+    }
+
+    public int getMaxEntries() {
+        return maxEntries;
+    }
 
     public void record(String remoteAddress, String detail, boolean success) {
         record(remoteAddress, detail, success, -1, null, null);
@@ -72,7 +83,11 @@ public class McpConnectionLog {
             String requestJson, String responseJson) {
         entries.addLast(
                 new Entry(Instant.now(), remoteAddress, detail, success, durationMillis, requestJson, responseJson));
-        while (entries.size() > MAX_ENTRIES) {
+        trim();
+    }
+
+    private void trim() {
+        while (entries.size() > maxEntries) {
             entries.pollFirst();
         }
     }

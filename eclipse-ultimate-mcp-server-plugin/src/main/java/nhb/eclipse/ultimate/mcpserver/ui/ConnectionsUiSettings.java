@@ -30,6 +30,7 @@ final class ConnectionsUiSettings {
     static final String KEY_WINDOW_HEIGHT = "windowHeight";
     static final String KEY_COL_PREFIX_WIDTH = "col.width.";
     static final String KEY_AUTO_REFRESH_INDEX = "autoRefreshIndex";
+    static final String KEY_MAX_ENTRIES = "maxEntries";
 
     private static ConnectionsUiSettings instance;
 
