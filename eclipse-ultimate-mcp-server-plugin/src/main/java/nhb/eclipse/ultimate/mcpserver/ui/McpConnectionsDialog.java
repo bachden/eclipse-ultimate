@@ -4,6 +4,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.window.Window;
@@ -15,6 +16,7 @@ import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Label;
@@ -46,10 +48,24 @@ public class McpConnectionsDialog extends Window {
 
     private static final String EMPTY_VALUE_MESSAGE = "Select a leaf value in tree";
 
+    private static final String[] COLUMN_KEYS = { "time", "remote", "method", "status", "duration" };
+    private static final String[] COLUMN_TITLES = { "Time / Field", "Remote Address", "Method", "Status",
+            "Response Time" };
+    private static final int[] COLUMN_DEFAULT_WIDTHS = { 320, 140, 160, 80, 100 };
+
+    private static final String[] AUTO_REFRESH_LABELS = { "Manual", "5s", "10s", "30s", "60s" };
+    private static final int[] AUTO_REFRESH_SECONDS = { 0, 5, 10, 30, 60 };
+
     private final McpConnectionLog connectionLog;
+    private final ConnectionsUiSettings uiSettings = ConnectionsUiSettings.getInstance();
     private Composite container;
     private Label messageLabel;
     private Text valuePanel;
+    private SashForm sash;
+    private Tree tree;
+    /** Ticks {@link #populate()} on the configured interval; re-armed via {@link #scheduleAutoRefresh}. */
+    private Runnable autoRefreshTick;
+    private int autoRefreshSeconds;
 
     private McpConnectionsDialog(Shell parentShell, McpConnectionLog connectionLog) {
         super(parentShell);
@@ -67,10 +83,16 @@ public class McpConnectionsDialog extends Window {
         }
         current = new McpConnectionsDialog(parentShell, connectionLog);
         current.create();
-        current.getShell().addShellListener(new ShellAdapter() {
+        McpConnectionsDialog opened = current;
+        opened.getShell().addShellListener(new ShellAdapter() {
             @Override
             public void shellClosed(ShellEvent e) {
-                current = null;
+                opened.saveLayout();
+                opened.autoRefreshSeconds = 0;
+                opened.autoRefreshTick = null;
+                if (current == opened) {
+                    current = null;
+                }
             }
         });
         current.open();
@@ -105,20 +127,74 @@ public class McpConnectionsDialog extends Window {
         container.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
 
         Composite buttonBar = new Composite(area, SWT.NONE);
-        buttonBar.setLayout(new GridLayout(1, false));
+        buttonBar.setLayout(new GridLayout(3, false));
         buttonBar.setLayoutData(new GridData(SWT.END, SWT.CENTER, false, false));
+
+        Label autoRefreshLabel = new Label(buttonBar, SWT.NONE);
+        autoRefreshLabel.setText("Auto-refresh:");
+
+        Combo autoRefreshCombo = new Combo(buttonBar, SWT.READ_ONLY);
+        autoRefreshCombo.setItems(AUTO_REFRESH_LABELS);
+        int savedIndex = readInt(uiSettings.section(), ConnectionsUiSettings.KEY_AUTO_REFRESH_INDEX, 0);
+        autoRefreshCombo.select(savedIndex >= 0 && savedIndex < AUTO_REFRESH_LABELS.length ? savedIndex : 0);
+        autoRefreshCombo.addListener(SWT.Selection, e -> {
+            uiSettings.section().put(ConnectionsUiSettings.KEY_AUTO_REFRESH_INDEX, autoRefreshCombo.getSelectionIndex());
+            uiSettings.save();
+            scheduleAutoRefresh(autoRefreshCombo.getSelectionIndex());
+        });
+
         Button refresh = new Button(buttonBar, SWT.PUSH);
         refresh.setText("Refresh");
         refresh.addListener(SWT.Selection, e -> populate());
 
         this.messageLabel = message;
         populate();
+        scheduleAutoRefresh(autoRefreshCombo.getSelectionIndex());
 
         return area;
     }
 
+    /**
+     * Arms (or disarms, for index 0 = Manual) periodic auto-refresh. The tick reschedules itself
+     * via {@link org.eclipse.swt.widgets.Display#timerExec} as long as {@link #autoRefreshSeconds}
+     * still matches the interval it was armed with and the shell is alive — changing the dropdown
+     * bumps {@link #autoRefreshSeconds} to a different value (or the shell closes, which zeroes
+     * it), which makes the next tick a no-op instead of rescheduling.
+     */
+    private void scheduleAutoRefresh(int selectionIndex) {
+        int seconds = selectionIndex >= 0 && selectionIndex < AUTO_REFRESH_SECONDS.length
+                ? AUTO_REFRESH_SECONDS[selectionIndex]
+                : 0;
+        autoRefreshSeconds = seconds;
+        if (seconds <= 0) {
+            autoRefreshTick = null;
+            return;
+        }
+
+        int armedFor = seconds;
+        Runnable tick = new Runnable() {
+            @Override
+            public void run() {
+                Shell shell = getShell();
+                if (shell == null || shell.isDisposed() || autoRefreshSeconds != armedFor
+                        || autoRefreshTick != this) {
+                    return;
+                }
+                populate();
+                shell.getDisplay().timerExec(armedFor * 1000, this);
+            }
+        };
+        autoRefreshTick = tick;
+        getShell().getDisplay().timerExec(seconds * 1000, tick);
+    }
+
     /** Rebuilds the summary label and tree from the connection log's current contents. */
     private void populate() {
+        if (sash != null && !sash.isDisposed()) {
+            // Capture the user's current column widths/sash ratio before the rebuild below
+            // discards them (e.g. a Refresh click shouldn't reset layout the user just set).
+            saveLayout();
+        }
         for (Control child : container.getChildren()) {
             child.dispose();
         }
@@ -130,42 +206,32 @@ public class McpConnectionsDialog extends Window {
 
         createAverageSummary(container, entries);
 
-        SashForm sash = new SashForm(container, SWT.HORIZONTAL);
-        sash.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true));
+        sash = new SashForm(container, SWT.HORIZONTAL);
+        GridData sashData = new GridData(SWT.FILL, SWT.FILL, true, true);
+        sashData.widthHint = 950;
+        sashData.heightHint = 360;
+        sash.setLayoutData(sashData);
 
         TreeViewer viewer = new TreeViewer(sash, SWT.BORDER | SWT.FULL_SELECTION | SWT.V_SCROLL | SWT.H_SCROLL);
-        Tree tree = viewer.getTree();
+        tree = viewer.getTree();
         tree.setHeaderVisible(true);
         tree.setLinesVisible(true);
 
         valuePanel = new Text(sash, SWT.BORDER | SWT.MULTI | SWT.WRAP | SWT.V_SCROLL | SWT.H_SCROLL | SWT.READ_ONLY);
         valuePanel.setText(EMPTY_VALUE_MESSAGE);
 
-        sash.setWeights(7, 3);
-        GridData sashData = new GridData(SWT.FILL, SWT.FILL, true, true);
-        sashData.widthHint = 950;
-        sashData.heightHint = 360;
-        sash.setLayoutData(sashData);
+        IDialogSettings settingsSection = uiSettings.section();
+        int leftWeight = readInt(settingsSection, ConnectionsUiSettings.KEY_SASH_LEFT_WEIGHT, 7);
+        int rightWeight = readInt(settingsSection, ConnectionsUiSettings.KEY_SASH_RIGHT_WEIGHT, 3);
+        sash.setWeights(leftWeight, rightWeight);
 
-        TreeColumn timeCol = new TreeColumn(tree, SWT.LEFT);
-        timeCol.setText("Time / Field");
-        timeCol.setWidth(320);
-
-        TreeColumn remoteCol = new TreeColumn(tree, SWT.LEFT);
-        remoteCol.setText("Remote Address");
-        remoteCol.setWidth(140);
-
-        TreeColumn methodCol = new TreeColumn(tree, SWT.LEFT);
-        methodCol.setText("Method");
-        methodCol.setWidth(160);
-
-        TreeColumn statusCol = new TreeColumn(tree, SWT.LEFT);
-        statusCol.setText("Status");
-        statusCol.setWidth(80);
-
-        TreeColumn durationCol = new TreeColumn(tree, SWT.RIGHT);
-        durationCol.setText("Response Time");
-        durationCol.setWidth(100);
+        for (int i = 0; i < COLUMN_KEYS.length; i++) {
+            TreeColumn column = new TreeColumn(tree, i == COLUMN_KEYS.length - 1 ? SWT.RIGHT : SWT.LEFT);
+            column.setText(COLUMN_TITLES[i]);
+            column.setWidth(
+                    readInt(settingsSection, ConnectionsUiSettings.KEY_COL_PREFIX_WIDTH + COLUMN_KEYS[i],
+                            COLUMN_DEFAULT_WIDTHS[i]));
+        }
 
         // Reverse so the most recent connection is first (matches the old table's ordering).
         List<McpConnectionLog.Entry> ordered = entries.reversed();
@@ -220,6 +286,47 @@ public class McpConnectionsDialog extends Window {
 
     @Override
     protected Point getInitialSize() {
-        return new Point(1000, 560);
+        IDialogSettings settingsSection = uiSettings.section();
+        int width = readInt(settingsSection, ConnectionsUiSettings.KEY_WINDOW_WIDTH, 1000);
+        int height = readInt(settingsSection, ConnectionsUiSettings.KEY_WINDOW_HEIGHT, 560);
+        return new Point(width, height);
+    }
+
+    /** Captures the current window size, sash weights and column widths for the next open. */
+    private void saveLayout() {
+        IDialogSettings settingsSection = uiSettings.section();
+        Shell shell = getShell();
+        if (shell != null && !shell.isDisposed()) {
+            Point size = shell.getSize();
+            settingsSection.put(ConnectionsUiSettings.KEY_WINDOW_WIDTH, size.x);
+            settingsSection.put(ConnectionsUiSettings.KEY_WINDOW_HEIGHT, size.y);
+        }
+        if (sash != null && !sash.isDisposed()) {
+            int[] weights = sash.getWeights();
+            if (weights.length == 2) {
+                settingsSection.put(ConnectionsUiSettings.KEY_SASH_LEFT_WEIGHT, weights[0]);
+                settingsSection.put(ConnectionsUiSettings.KEY_SASH_RIGHT_WEIGHT, weights[1]);
+            }
+        }
+        if (tree != null && !tree.isDisposed()) {
+            TreeColumn[] columns = tree.getColumns();
+            for (int i = 0; i < columns.length && i < COLUMN_KEYS.length; i++) {
+                settingsSection.put(ConnectionsUiSettings.KEY_COL_PREFIX_WIDTH + COLUMN_KEYS[i],
+                        columns[i].getWidth());
+            }
+        }
+        uiSettings.save();
+    }
+
+    private static int readInt(IDialogSettings settingsSection, String key, int fallback) {
+        String value = settingsSection.get(key);
+        if (value == null) {
+            return fallback;
+        }
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
     }
 }
