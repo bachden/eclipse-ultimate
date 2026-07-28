@@ -1,11 +1,13 @@
 package nhb.eclipse.ultimate.mcpserver.ui;
 
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.eclipse.jface.dialogs.IDialogSettings;
 import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
@@ -24,6 +26,7 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
+import org.eclipse.swt.widgets.TreeItem;
 
 import nhb.eclipse.ultimate.mcpserver.server.McpConnectionLog;
 
@@ -195,6 +198,24 @@ public class McpConnectionsDialog extends Window {
             // discards them (e.g. a Refresh click shouldn't reset layout the user just set).
             saveLayout();
         }
+        // Rows are rebuilt from scratch below, so the previously selected Entry object is gone;
+        // remember it by timestamp (stable identity for an immutable, append-only log entry) to
+        // reselect the matching row afterwards instead of losing the selection on every refresh.
+        // Also remember the top-visible entry's timestamp so the scroll position can be restored
+        // in place — newer entries are prepended (most-recent-first ordering), so without this the
+        // view would jump back to the top on every refresh that added a record.
+        Instant selectedTimestamp = null;
+        Instant topTimestamp = null;
+        if (tree != null && !tree.isDisposed()) {
+            TreeItem[] selection = tree.getSelection();
+            if (selection.length > 0 && selection[0].getData() instanceof McpConnectionLog.Entry entry) {
+                selectedTimestamp = entry.timestamp;
+            }
+            TreeItem topItem = tree.getTopItem();
+            if (topItem != null && topItem.getData() instanceof McpConnectionLog.Entry entry) {
+                topTimestamp = entry.timestamp;
+            }
+        }
         for (Control child : container.getChildren()) {
             child.dispose();
         }
@@ -238,6 +259,26 @@ public class McpConnectionsDialog extends Window {
         viewer.setContentProvider(new ConnectionsTreeContentProvider(ordered));
         viewer.setLabelProvider(new ConnectionsTreeLabelProvider());
         viewer.setInput(ordered);
+
+        if (selectedTimestamp != null) {
+            for (McpConnectionLog.Entry entry : ordered) {
+                if (entry.timestamp.equals(selectedTimestamp)) {
+                    // reveal=false: restoring the scroll position ourselves below, so the
+                    // selection must not also trigger its own auto-scroll.
+                    viewer.setSelection(new StructuredSelection(entry), false);
+                    break;
+                }
+            }
+        }
+        if (topTimestamp != null) {
+            for (TreeItem item : tree.getItems()) {
+                if (item.getData() instanceof McpConnectionLog.Entry entry
+                        && entry.timestamp.equals(topTimestamp)) {
+                    tree.setTopItem(item);
+                    break;
+                }
+            }
+        }
 
         viewer.addSelectionChangedListener(event -> {
             Object selected = ((IStructuredSelection) event.getSelection()).getFirstElement();
